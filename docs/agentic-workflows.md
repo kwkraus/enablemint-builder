@@ -37,3 +37,25 @@ The workflow:
 Pull requests created by this workflow are draft PRs with auto-merge disabled. A maintainer should review and approve before merging.
 
 > **Note:** The workflow skips internal refactors and performance changes that have no user-facing impact.
+
+---
+
+## Constitution Drift Review
+
+**File:** `.github/workflows/constitution-drift-review.md`  
+**Schedule:** Daily at 06:00 UTC  
+**Output:** GitHub issue labeled `governance` / `maintenance`
+
+Reviews changes merged into the default branch during the last 24 hours and checks for drift between the implementation, the Spec-Kit constitution (`.specify/memory/constitution.md`), and repo guidance files (`.github/copilot-instructions.md`, `.github/instructions/**/*.instructions.md`).
+
+The workflow:
+
+1. Gathers merged PRs from the last 24 hours.
+2. Inspects each significant PR's title, description, changed files, and diff.
+3. Compares the merged implementation against the guidance hierarchy and classifies each finding as one of: _conforms to constitution_, _instruction drift_, _implementation drift_, _intentional constitutional evolution_, or _no material drift_.
+4. Creates a tracked maintenance issue only when material drift or a governance gap is found.
+5. Calls `noop` when no relevant change or policy drift is detected.
+
+The constitution is treated as the durable source of project intent. The workflow flags discrepancies for human review rather than automatically updating the constitution.
+
+> **Note:** The workflow never modifies `.specify/memory/constitution.md` automatically. Constitutional updates require explicit human approval.
