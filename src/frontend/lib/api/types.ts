@@ -13,6 +13,8 @@ export interface SeriesResponse {
   seriesId: string
   title: string
   details: string | null
+  isPublic: boolean
+  imageUrl: string | null
   createdAt: string
   updatedAt: string
 }
@@ -36,6 +38,22 @@ export interface SessionResponse {
   endsAt: string
   registrationUrl: string | null
   description: string | null
+}
+
+export interface PublicSessionItem {
+  sessionId: string
+  title: string
+  startsAt: string
+  endsAt: string
+  registrationUrl: string | null
+  description: string | null
+}
+
+export interface PublicSeriesResponse {
+  title: string
+  details: string | null
+  imageUrl: string | null
+  sessions: PublicSessionItem[]
 }
 
 export interface SeriesMetricsResponse {

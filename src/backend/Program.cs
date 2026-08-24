@@ -3,6 +3,7 @@ using EnableFront.Builder.Features.Export;
 using EnableFront.Builder.Features.Me;
 using EnableFront.Builder.Features.Metrics;
 using EnableFront.Builder.Features.Series;
+using EnableFront.Builder.Features.Series.Public;
 using EnableFront.Builder.Features.Sessions;
 using EnableFront.Builder.Infrastructure.Data;
 using EnableFront.Builder.Infrastructure.Graph;
@@ -61,6 +62,7 @@ builder.Services.AddSingleton(sp =>
 
 // Feature services
 builder.Services.AddScoped<SeriesService>();
+builder.Services.AddScoped<PublicSeriesService>();
 builder.Services.AddScoped<SessionService>();
 builder.Services.AddScoped<MetricsService>();
 builder.Services.AddScoped<MarkdownExportService>();
@@ -125,6 +127,7 @@ app.MapGet("/api/time", () =>
 
 // Feature endpoints
 app.MapSeriesEndpoints();
+app.MapPublicSeriesEndpoints();
 app.MapSessionEndpoints();
 app.MapMetricsEndpoints();
 app.MapMeEndpoints();

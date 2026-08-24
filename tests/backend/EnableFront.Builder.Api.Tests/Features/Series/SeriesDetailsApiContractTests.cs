@@ -136,6 +136,48 @@ public sealed class SeriesDetailsApiContractTests : IDisposable
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
+    [Fact]
+    public async Task Get_ReturnsIsPublic_InResponseBody()
+    {
+        var created = await CreateSeriesAsync("Visibility Series", null);
+
+        var getResponse = await _ownerClient.GetAsync($"/api/v1/series/{created.SeriesId}");
+        var fetched = await getResponse.Content.ReadFromJsonAsync<SeriesResponseDto>(JsonOptions);
+
+        fetched!.IsPublic.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task Put_PersistsIsPublic_AndReturnsItInResponseBody()
+    {
+        var created = await CreateSeriesAsync("Visibility Series", null);
+
+        var putResponse = await _ownerClient.PutAsJsonAsync(
+            $"/api/v1/series/{created.SeriesId}", new UpdateSeriesRequest(created.Title, IsPublic: true));
+
+        putResponse.StatusCode.Should().Be(HttpStatusCode.OK);
+        var updated = await putResponse.Content.ReadFromJsonAsync<SeriesResponseDto>(JsonOptions);
+        updated!.IsPublic.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task Put_ReturnsNotFound_ForNonOwner_SoIsPublicCannotBeChangedByOthers()
+    {
+        var created = await CreateSeriesAsync("Owner Only Series", null);
+
+        using var otherClient = _factory.CreateClient();
+        otherClient.DefaultRequestHeaders.Add(TestAuthHandler.OidHeaderName, OtherOid);
+
+        var response = await otherClient.PutAsJsonAsync(
+            $"/api/v1/series/{created.SeriesId}", new UpdateSeriesRequest(created.Title, IsPublic: true));
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+
+        var getResponse = await _ownerClient.GetAsync($"/api/v1/series/{created.SeriesId}");
+        var fetched = await getResponse.Content.ReadFromJsonAsync<SeriesResponseDto>(JsonOptions);
+        fetched!.IsPublic.Should().BeFalse("a non-owner PUT must not change visibility");
+    }
+
     private async Task<SeriesResponseDto> CreateSeriesAsync(string title, string? details)
     {
         var response = await _ownerClient.PostAsJsonAsync("/api/v1/series", new CreateSeriesRequest(title, details));
