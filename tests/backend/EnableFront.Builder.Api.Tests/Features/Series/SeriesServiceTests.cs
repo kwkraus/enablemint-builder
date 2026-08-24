@@ -193,6 +193,65 @@ public class SeriesServiceTests : IDisposable
         result.Should().BeNull();
     }
 
+    // ---------- IsPublic (visibility toggle) ----------
+
+    [Fact]
+    public async Task CreateAsync_DefaultsIsPublic_ToFalse()
+    {
+        var result = await _sut.CreateAsync(new CreateSeriesRequest("New Series"), OwnerUserId);
+
+        result.IsPublic.Should().BeFalse();
+
+        var saved = await _db.Series.FindAsync(result.SeriesId);
+        saved!.IsPublic.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task UpdateAsync_PersistsIsPublic_FalseToTrue()
+    {
+        var series = BuildSeries("Alpha", OwnerUserId);
+        _db.Series.Add(series);
+        await _db.SaveChangesAsync();
+
+        var result = await _sut.UpdateAsync(
+            series.SeriesId, new UpdateSeriesRequest("Alpha", IsPublic: true), OwnerUserId);
+
+        result!.IsPublic.Should().BeTrue();
+        var saved = await _db.Series.FindAsync(series.SeriesId);
+        saved!.IsPublic.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task UpdateAsync_PersistsIsPublic_TrueToFalse()
+    {
+        var series = BuildSeries("Alpha", OwnerUserId);
+        series.IsPublic = true;
+        _db.Series.Add(series);
+        await _db.SaveChangesAsync();
+
+        var result = await _sut.UpdateAsync(
+            series.SeriesId, new UpdateSeriesRequest("Alpha", IsPublic: false), OwnerUserId);
+
+        result!.IsPublic.Should().BeFalse();
+        var saved = await _db.Series.FindAsync(series.SeriesId);
+        saved!.IsPublic.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task UpdateAsync_PreservesStoredIsPublic_WhenRequestOmitsField()
+    {
+        var series = BuildSeries("Alpha", OwnerUserId);
+        series.IsPublic = true;
+        _db.Series.Add(series);
+        await _db.SaveChangesAsync();
+
+        var result = await _sut.UpdateAsync(series.SeriesId, new UpdateSeriesRequest("Alpha Renamed"), OwnerUserId);
+
+        result!.IsPublic.Should().BeTrue("omitting IsPublic on an unrelated save must not reset visibility");
+        var saved = await _db.Series.FindAsync(series.SeriesId);
+        saved!.IsPublic.Should().BeTrue();
+    }
+
     [Fact]
     public async Task UpdateAsync_SetsUpdatedAt_AfterOriginalCreation()
     {

@@ -13,8 +13,10 @@ export default function AppHeader() {
   const pathname = usePathname()
   const { mode, toggle } = useColorMode()
 
-  // Hide the header on the login page — it has its own branding
-  if (pathname === '/login') return null
+  // Hide the header on the login page and public series landing pages —
+  // both have their own distinct branding (FR-011) and must not surface any
+  // authenticated-app chrome to anonymous visitors.
+  if (pathname === '/login' || pathname?.startsWith('/public/')) return null
 
   return (
     <Header style={{ position: 'sticky', top: 0, zIndex: 30, width: '100%' }}>

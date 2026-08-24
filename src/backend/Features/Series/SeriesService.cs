@@ -8,10 +8,12 @@ namespace EnableFront.Builder.Features.Series;
 public class SeriesService
 {
     private readonly AppDbContext _db;
+    private readonly ILogger<SeriesService>? _logger;
 
-    public SeriesService(AppDbContext db)
+    public SeriesService(AppDbContext db, ILogger<SeriesService>? logger = null)
     {
         _db = db;
+        _logger = logger;
     }
 
     public async Task<IEnumerable<SeriesListItemDto>> GetAllAsync(string ownerUserId)
@@ -85,10 +87,22 @@ public class SeriesService
         // Validate before mutating anything so a rejected update never persists partial content.
         var sanitizedDetails = SanitizeDetailsOrThrow(req.Details);
 
+        var previousIsPublic = series.IsPublic;
+
         series.Title = req.Title;
         series.Details = sanitizedDetails;
+        // Null means the client omitted the field: preserve the current stored value rather than
+        // silently resetting visibility to false on an unrelated save.
+        series.IsPublic = req.IsPublic ?? series.IsPublic;
         series.UpdatedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync();
+
+        if (series.IsPublic != previousIsPublic)
+        {
+            _logger?.LogInformation(
+                "Series {SeriesId} public visibility changed from {PreviousIsPublic} to {IsPublic}",
+                series.SeriesId, previousIsPublic, series.IsPublic);
+        }
 
         return ToResponseDto(series);
     }
@@ -120,5 +134,5 @@ public class SeriesService
     }
 
     private static SeriesResponseDto ToResponseDto(Domain.Entities.Series s) =>
-        new(s.SeriesId, s.Title, s.Details, s.CreatedAt, s.UpdatedAt);
+        new(s.SeriesId, s.Title, s.Details, s.IsPublic, s.ImageUrl, s.CreatedAt, s.UpdatedAt);
 }

@@ -25,7 +25,7 @@ export async function createSeries(
 
 export async function updateSeries(
   id: string,
-  data: { title: string; details?: string | null },
+  data: { title: string; details?: string | null; isPublic?: boolean },
   accessToken: string,
 ): Promise<SeriesResponse> {
   return apiFetch<SeriesResponse>(
