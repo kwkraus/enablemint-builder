@@ -8,7 +8,7 @@ Enablemint Builder is a **webinar management platform** for local event planning
 
 ## Key Capabilities
 
-- **Series & session management** — Create webinar series containing multiple sessions; manage titles and schedules. Series support an optional rich-text details field (bold, italic, underline, bulleted lists) to describe the series and communicate expected outcomes to attendees. Sessions support an optional registration URL (http/https, any provider) that links to an external signup page and opens in a new tab.
+- **Series & session management** — Create webinar series containing multiple sessions; manage titles and schedules. Series support an optional rich-text details field (bold, italic, underline, bulleted lists) to describe the series and communicate expected outcomes to attendees. Sessions support an optional rich-text description (bold, italic, underline, bulleted lists; up to 10,000 plain-text characters) to capture session-specific context; long descriptions render collapsed by default with accessible "Show more / Show less" controls. Sessions also support an optional registration URL (http/https, any provider) that links to an external signup page and opens in a new tab.
 - **Registration & attendance tracking** — Stores normalized registration and attendance records received from external ingestion sources into the local data model.
 - **Metrics & analytics** — Aggregated engagement metrics per session and across a series: total registrations, attendees, unique account domains, and warm-account influence tracking.
 - **Entra ID authentication** — Single-tenant login via Entra ID.
