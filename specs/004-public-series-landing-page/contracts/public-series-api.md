@@ -21,28 +21,34 @@ No query parameters, no request body, no headers required.
 {
   "title": "Modern Web Fundamentals",
   "details": "<p>Learn the essentials of building <strong>modern</strong> web apps.</p><ul><li>Outcome one</li></ul>",
+  "imageUrl": "https://cdn.example.com/modern-web-fundamentals.png",
   "sessions": [
     {
       "sessionId": "b7e1c2a0-....",
       "title": "Session 1: Getting Started",
       "startsAt": "2026-09-10T17:00:00Z",
       "endsAt": "2026-09-10T18:00:00Z",
-      "registrationUrl": "https://teams.microsoft.com/registration/..."
+      "registrationUrl": "https://teams.microsoft.com/registration/...",
+      "description": "Set up the tools and build your first page."
     },
     {
       "sessionId": "d4f9a311-....",
       "title": "Session 2: Advanced Patterns",
       "startsAt": "2026-09-17T17:00:00Z",
       "endsAt": "2026-09-17T18:00:00Z",
-      "registrationUrl": null
+      "registrationUrl": null,
+      "description": null
     }
   ]
 }
 ```
 
 - `details` is `null`/omitted-equivalent when the series has no `Details`.
+- `imageUrl` is `null` when the series has no configured image URL.
 - `sessions` is `[]` when the series has zero sessions (frontend renders the empty-state message,
   FR-009).
+- `description` is `null` when a session has no description; otherwise it contains the session's
+  descriptive text.
 - `registrationUrl` is `null` for sessions with no stored registration URL (FR-006) — the frontend
   omits the Register control entirely for that row.
 - No `ownerUserId`, `seriesId`, `isPublic`, or metrics field is present anywhere in this shape
