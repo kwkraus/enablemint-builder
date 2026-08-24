@@ -22,10 +22,12 @@ public class PublicSeriesService
     /// the caller (endpoint) must map a null result to the same generic not-found response either
     /// way, so this method never signals which case occurred.
     /// </summary>
-    public async Task<PublicSeriesResponseDto?> GetPublicSeriesAsync(Guid id)
+    public async Task<PublicSeriesResponseDto?> GetPublicSeriesAsync(
+        Guid id,
+        CancellationToken cancellationToken = default)
     {
         var series = await _db.Series
-            .FirstOrDefaultAsync(s => s.SeriesId == id && s.IsPublic);
+            .FirstOrDefaultAsync(s => s.SeriesId == id && s.IsPublic, cancellationToken);
 
         if (series is null)
         {
@@ -43,7 +45,7 @@ public class PublicSeriesService
                 s.EndsAt,
                 s.RegistrationUrl,
                 s.Description))
-            .ToListAsync();
+            .ToListAsync(cancellationToken);
 
         _logger?.LogInformation(
             "Public series request for {SeriesId} resolved to a public series with {SessionCount} sessions",

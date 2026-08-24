@@ -15,9 +15,13 @@ public static class PublicSeriesEndpoints
     {
         var group = app.MapGroup("/api/v1/public/series");
 
-        group.MapGet("/{id:guid}", async (Guid id, PublicSeriesService service, HttpContext ctx) =>
+        group.MapGet("/{id:guid}", async (
+            Guid id,
+            PublicSeriesService service,
+            HttpContext ctx,
+            CancellationToken cancellationToken) =>
         {
-            var result = await service.GetPublicSeriesAsync(id);
+            var result = await service.GetPublicSeriesAsync(id, cancellationToken);
             return result is null
                 ? Results.NotFound(new ErrorEnvelope(
                     "series_not_found", "Series not found.", ctx.TraceIdentifier))
