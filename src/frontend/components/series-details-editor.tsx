@@ -14,6 +14,19 @@ export interface SeriesDetailsEditorProps {
   onCancel: () => void
   disabled?: boolean
   saving?: boolean
+  /**
+   * Accessible label for the formatting toolbar. Defaults to the series-details
+   * wording; callers reusing this editor for a different field (e.g. the
+   * session description, specs/003-session-description) should pass a
+   * distinct label so the two fields remain unambiguous to assistive tech.
+   */
+  toolbarLabel?: string
+  /** Accessible name for the editable region. Defaults to "Series details". */
+  textboxLabel?: string
+  /** Placeholder copy shown when the editable region is empty. */
+  placeholderText?: string
+  /** Label for the primary save button. Defaults to "Save details". */
+  saveLabel?: string
 }
 
 type FormatCommand = 'bold' | 'italic' | 'underline' | 'insertUnorderedList'
@@ -26,6 +39,10 @@ type FormatCommand = 'bold' | 'italic' | 'underline' | 'insertUnorderedList'
  * the repository's approved stack has no editor library, and the server
  * (`SeriesDetailsSanitizer`) remains the sole authority for the persisted
  * markup regardless of what the browser produces here.
+ *
+ * Reused (unchanged behavior/defaults) by the session description feature
+ * (specs/003-session-description/research.md Decision 4) via the optional
+ * label/placeholder props below.
  */
 export function SeriesDetailsEditor({
   initialValue,
@@ -33,6 +50,10 @@ export function SeriesDetailsEditor({
   onCancel,
   disabled = false,
   saving = false,
+  toolbarLabel = 'Series details formatting',
+  textboxLabel = 'Series details',
+  placeholderText = 'Describe the series and what attendees can expect\u2026',
+  saveLabel = 'Save details',
 }: SeriesDetailsEditorProps) {
   const editorRef = useRef<HTMLDivElement | null>(null)
   const [isEmpty, setIsEmpty] = useState(() => initialValue.trim().length === 0)
@@ -126,7 +147,7 @@ export function SeriesDetailsEditor({
     <div className="space-y-2">
       <div
         role="toolbar"
-        aria-label="Series details formatting"
+        aria-label={toolbarLabel}
         className="flex items-center gap-1 rounded-t-lg px-2 py-1"
         style={{
           border: '1px solid var(--borderColor-default)',
@@ -193,14 +214,14 @@ export function SeriesDetailsEditor({
             style={{ color: 'var(--fgColor-muted)' }}
             aria-hidden="true"
           >
-            Describe the series and what attendees can expect&hellip;
+            {placeholderText}
           </p>
         )}
         <div
           ref={editorRef}
           role="textbox"
           aria-multiline="true"
-          aria-label="Series details"
+          aria-label={textboxLabel}
           contentEditable={!controlsDisabled}
           suppressContentEditableWarning
           onInput={handleInput}
@@ -225,7 +246,7 @@ export function SeriesDetailsEditor({
           disabled={controlsDisabled}
           aria-busy={saving}
         >
-          {saving ? <Spinner size="small" /> : 'Save details'}
+          {saving ? <Spinner size="small" /> : saveLabel}
         </Button>
         <Button variant="default" size="small" onClick={onCancel} disabled={saving}>
           Cancel

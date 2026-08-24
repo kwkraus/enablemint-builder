@@ -10,7 +10,13 @@ export async function getSessionsBySeries(
 
 export async function createSession(
   seriesId: string,
-  data: { title: string; startsAt: string; endsAt: string; registrationUrl?: string | null },
+  data: {
+    title: string
+    startsAt: string
+    endsAt: string
+    registrationUrl?: string | null
+    description?: string | null
+  },
   accessToken: string,
 ): Promise<SessionResponse> {
   return apiFetch<SessionResponse>(
@@ -29,7 +35,13 @@ export async function getSessionById(id: string, accessToken: string): Promise<S
 
 export async function updateSession(
   id: string,
-  data: { title: string; startsAt: string; endsAt: string; registrationUrl?: string | null },
+  data: {
+    title: string
+    startsAt: string
+    endsAt: string
+    registrationUrl?: string | null
+    description?: string | null
+  },
   accessToken: string,
 ): Promise<SessionResponse> {
   return apiFetch<SessionResponse>(

@@ -13,6 +13,7 @@ import { ConfirmDialog } from '@/components/confirm-dialog'
 import { InlineEditableTitle } from '@/components/inline-editable-title'
 import { SessionSchedulePicker } from '@/components/session-schedule-picker'
 import { RegistrationLinkDialog } from '@/components/registration-link-dialog'
+import { SessionDescription } from '@/components/session-description'
 
 import {
   getSessionById,
@@ -56,6 +57,7 @@ export default function SessionDetailPage() {
       setStartsAtDate(toDate(s.startsAt))
       setEndsAtDate(toDate(s.endsAt))
       setRegistrationUrl(s.registrationUrl ?? null)
+      setDescription(s.description ?? null)
     } catch (err) {
       setLoadError(err instanceof Error ? err.message : 'Failed to load session')
     } finally {
@@ -99,6 +101,51 @@ export default function SessionDetailPage() {
     }
   }
 
+  // ── Session description (specs/003-session-description) ──────────────────
+  // The description belongs to the individual session (FR-002/FR-007) and is
+  // always carried through the existing full session PUT: there is no
+  // separate description-only endpoint (research.md Decision 2), so both the
+  // description editor's own save and the schedule form's Save button below
+  // must submit the currently-known description together with the rest of
+  // the session's fields.
+  const [description, setDescription] = useState<string | null>(null)
+  const [descriptionSaving, setDescriptionSaving] = useState(false)
+  const [descriptionError, setDescriptionError] = useState<string | null>(null)
+
+  // The backend only ever returns/updates a session for its owner (mirrors
+  // specs/001-series-details/research.md Decision 4) -- there is no separate
+  // non-owner "viewer" role today, so anyone who can load this page can also
+  // edit its description. Single call site to change if that ever differs.
+  const canEditDescription = true
+
+  async function handleDescriptionSave(nextDescription: string) {
+    setDescriptionSaving(true)
+    setDescriptionError(null)
+    try {
+      const updated = await updateSession(
+        id,
+        {
+          // Description saves use the last persisted session fields so an
+          // in-progress schedule/title edit is neither committed nor able to
+          // block the description update with an unrelated validation error.
+          title: session?.title ?? title.trim(),
+          startsAt: session?.startsAt ?? (startsAtDate ? startsAtDate.toISOString() : ''),
+          endsAt: session?.endsAt ?? (endsAtDate ? endsAtDate.toISOString() : ''),
+          registrationUrl: session?.registrationUrl ?? null,
+          description: nextDescription,
+        },
+        token,
+      )
+      setDescription(updated.description)
+      setSession((currentSession) => (currentSession ? { ...currentSession, ...updated } : updated))
+    } catch (err) {
+      setDescriptionError(err instanceof Error ? err.message : 'Failed to update session description')
+      throw err
+    } finally {
+      setDescriptionSaving(false)
+    }
+  }
+
   const [saveLoading, setSaveLoading] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
 
@@ -118,6 +165,7 @@ export default function SessionDetailPage() {
           startsAt: startsAtDate ? startsAtDate.toISOString() : '',
           endsAt: endsAtDate ? endsAtDate.toISOString() : '',
           registrationUrl,
+          description,
         },
         token,
       )
@@ -146,7 +194,7 @@ export default function SessionDetailPage() {
     }
   }
 
-  const busy = saveLoading || deleteLoading || titleSaveLoading
+  const busy = saveLoading || deleteLoading || titleSaveLoading || descriptionSaving
 
   if (loadingData) {
     return (
@@ -239,6 +287,7 @@ export default function SessionDetailPage() {
 
       {deleteError && <ErrorBanner message={deleteError} />}
       {titleSaveError && <ErrorBanner message={titleSaveError} />}
+      {descriptionError && <ErrorBanner message={descriptionError} />}
       {saveError && <ErrorBanner message={saveError} />}
 
       {saveLoading && (
@@ -249,6 +298,14 @@ export default function SessionDetailPage() {
           </div>
         </div>
       )}
+
+      <SessionDescription
+        value={description}
+        canEdit={canEditDescription}
+        onSave={handleDescriptionSave}
+        saving={descriptionSaving}
+        disabled={busy}
+      />
 
       <form onSubmit={handleSave} noValidate className="space-y-6">
           <div className="grid grid-cols-1 lg:grid-cols-[1fr_1fr] gap-6">

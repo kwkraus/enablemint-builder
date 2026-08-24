@@ -687,6 +687,292 @@ public class SessionServiceTests : IDisposable
     }
 
 
+
+    // ---------- Description: sanitized persistence (specs/003-session-description) ----------
+
+    [Fact]
+    public async Task CreateAsync_SanitizesDescription_BeforePersisting()
+    {
+        // Arrange
+        var series = BuildSeries();
+        _db.Series.Add(series);
+        await _db.SaveChangesAsync();
+
+        var startsAt = DateTime.UtcNow.AddHours(1);
+        var req = new CreateSessionRequest(
+            "Described Session", startsAt, startsAt.AddHours(1),
+            RegistrationUrl: null,
+            Description: "<p><b>Bold</b> outcome</p><a href=\"https://example.com\">link text</a>");
+
+        // Act
+        var (session, errorCode) = await _sut.CreateAsync(series.SeriesId, req, OwnerUserId);
+
+        // Assert
+        errorCode.Should().BeNull();
+        session!.Description.Should().Be("<p><strong>Bold</strong> outcome</p>link text");
+
+        var saved = await _db.Sessions.FindAsync(session.SessionId);
+        saved!.Description.Should().Be("<p><strong>Bold</strong> outcome</p>link text");
+    }
+
+    [Fact]
+    public async Task CreateAsync_LeavesDescriptionNull_WhenOmitted()
+    {
+        // Arrange
+        var series = BuildSeries();
+        _db.Series.Add(series);
+        await _db.SaveChangesAsync();
+
+        var startsAt = DateTime.UtcNow.AddHours(1);
+        var req = new CreateSessionRequest("No Description Session", startsAt, startsAt.AddHours(1));
+
+        // Act
+        var (session, errorCode) = await _sut.CreateAsync(series.SeriesId, req, OwnerUserId);
+
+        // Assert
+        errorCode.Should().BeNull();
+        session!.Description.Should().BeNull();
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    [InlineData("<p></p>")]
+    public async Task CreateAsync_TreatsBlankOrWhitespaceOnlyDescription_AsNull(string blankDescription)
+    {
+        // Arrange
+        var series = BuildSeries();
+        _db.Series.Add(series);
+        await _db.SaveChangesAsync();
+
+        var startsAt = DateTime.UtcNow.AddHours(1);
+        var req = new CreateSessionRequest(
+            "Blank Description Session", startsAt, startsAt.AddHours(1),
+            RegistrationUrl: null, Description: blankDescription);
+
+        // Act
+        var (session, errorCode) = await _sut.CreateAsync(series.SeriesId, req, OwnerUserId);
+
+        // Assert
+        errorCode.Should().BeNull();
+        session!.Description.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task CreateAsync_Accepts_ExactlyMaxLengthDescription()
+    {
+        // Arrange
+        var series = BuildSeries();
+        _db.Series.Add(series);
+        await _db.SaveChangesAsync();
+
+        var text = new string('a', EnableFront.Builder.Common.SeriesDetailsSanitizer.MaxPlainTextLength);
+        var startsAt = DateTime.UtcNow.AddHours(1);
+        var req = new CreateSessionRequest(
+            "Max Length Description Session", startsAt, startsAt.AddHours(1),
+            RegistrationUrl: null, Description: text);
+
+        // Act
+        var (session, errorCode) = await _sut.CreateAsync(series.SeriesId, req, OwnerUserId);
+
+        // Assert
+        errorCode.Should().BeNull();
+        session!.Description.Should().Be(text);
+    }
+
+    [Fact]
+    public async Task CreateAsync_Rejects_OneOverMaxLengthDescription_AndPersistsNothing()
+    {
+        // Arrange
+        var series = BuildSeries();
+        _db.Series.Add(series);
+        await _db.SaveChangesAsync();
+
+        var text = new string('a', EnableFront.Builder.Common.SeriesDetailsSanitizer.MaxPlainTextLength + 1);
+        var startsAt = DateTime.UtcNow.AddHours(1);
+        var req = new CreateSessionRequest(
+            "Too Long Description Session", startsAt, startsAt.AddHours(1),
+            RegistrationUrl: null, Description: text);
+
+        // Act
+        var (session, errorCode) = await _sut.CreateAsync(series.SeriesId, req, OwnerUserId);
+
+        // Assert
+        session.Should().BeNull();
+        errorCode.Should().Be("validation_error");
+        (await _db.Sessions.AnyAsync(s => s.Title == "Too Long Description Session")).Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task UpdateAsync_SanitizesDescription_BeforePersisting()
+    {
+        // Arrange
+        var series = BuildSeries();
+        _db.Series.Add(series);
+        var session = BuildSession(series.SeriesId);
+        _db.Sessions.Add(session);
+        await _db.SaveChangesAsync();
+
+        var newStart = DateTime.UtcNow.AddDays(3);
+        var req = new UpdateSessionRequest(
+            "Title", newStart, newStart.AddHours(1),
+            RegistrationUrl: null, Description: "<ul><li>One</li><li><i>Two</i></li></ul>");
+
+        // Act
+        var (result, errorCode) = await _sut.UpdateAsync(session.SessionId, req, OwnerUserId);
+
+        // Assert
+        errorCode.Should().BeNull();
+        result!.Description.Should().Be("<ul><li>One</li><li><em>Two</em></li></ul>");
+
+        var saved = await _db.Sessions.FindAsync(session.SessionId);
+        saved!.Description.Should().Be("<ul><li>One</li><li><em>Two</em></li></ul>");
+    }
+
+    [Theory]
+    [InlineData("")]
+    [InlineData("   ")]
+    [InlineData("<p></p>")]
+    public async Task UpdateAsync_ClearsDescription_ToNull_WhenBlankOrWhitespaceProvided(string blankDescription)
+    {
+        // Arrange
+        var series = BuildSeries();
+        _db.Series.Add(series);
+        var session = BuildSession(series.SeriesId);
+        session.Description = "<p>Existing description</p>";
+        _db.Sessions.Add(session);
+        await _db.SaveChangesAsync();
+
+        var newStart = DateTime.UtcNow.AddDays(3);
+        var req = new UpdateSessionRequest(
+            "Title", newStart, newStart.AddHours(1),
+            RegistrationUrl: null, Description: blankDescription);
+
+        // Act
+        var (result, errorCode) = await _sut.UpdateAsync(session.SessionId, req, OwnerUserId);
+
+        // Assert
+        errorCode.Should().BeNull();
+        result!.Description.Should().BeNull();
+
+        var saved = await _db.Sessions.FindAsync(session.SessionId);
+        saved!.Description.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task UpdateAsync_Rejects_OneOverMaxLengthDescription_AndPersistsNoPartialUpdate()
+    {
+        // Arrange
+        var series = BuildSeries();
+        _db.Series.Add(series);
+        var session = BuildSession(series.SeriesId);
+        session.Description = "<p>Original description</p>";
+        _db.Sessions.Add(session);
+        await _db.SaveChangesAsync();
+
+        var text = new string('a', EnableFront.Builder.Common.SeriesDetailsSanitizer.MaxPlainTextLength + 1);
+        var newStart = DateTime.UtcNow.AddDays(3);
+        var req = new UpdateSessionRequest(
+            "Changed Title", newStart, newStart.AddHours(1),
+            RegistrationUrl: null, Description: text);
+
+        // Act
+        var (result, errorCode) = await _sut.UpdateAsync(session.SessionId, req, OwnerUserId);
+
+        // Assert
+        result.Should().BeNull();
+        errorCode.Should().Be("validation_error");
+
+        var saved = await _db.Sessions.FindAsync(session.SessionId);
+        saved!.Title.Should().Be("Test Session", "no partial update should be persisted when validation fails");
+        saved.Description.Should().Be("<p>Original description</p>");
+        saved.StartsAt.Should().NotBe(newStart, "the rejected schedule change must not be persisted either");
+    }
+
+    [Fact]
+    public async Task UpdateAsync_ReturnsError_ForWrongOwner_EvenWhenDescriptionProvided()
+    {
+        // Arrange — an attacker (wrong owner) cannot alter another owner's session description.
+        var series = BuildSeries();
+        _db.Series.Add(series);
+        var session = BuildSession(series.SeriesId);
+        session.Description = "<p>Owner's original description</p>";
+        _db.Sessions.Add(session);
+        await _db.SaveChangesAsync();
+
+        var req = new UpdateSessionRequest(
+            "Hack", DateTime.UtcNow, DateTime.UtcNow.AddHours(1),
+            RegistrationUrl: null, Description: "<p>Hacked description</p>");
+
+        // Act
+        var (result, errorCode) = await _sut.UpdateAsync(session.SessionId, req, OtherUserId);
+
+        // Assert
+        result.Should().BeNull();
+        errorCode.Should().Be("session_not_found");
+
+        var saved = await _db.Sessions.FindAsync(session.SessionId);
+        saved!.Description.Should().Be("<p>Owner's original description</p>");
+    }
+
+    [Fact]
+    public async Task GetByIdAsync_ReturnsSanitizedDescription_ForCorrectOwner()
+    {
+        // Arrange
+        var series = BuildSeries();
+        _db.Series.Add(series);
+        var session = BuildSession(series.SeriesId);
+        session.Description = "<p><strong>Already sanitized</strong></p>";
+        _db.Sessions.Add(session);
+        await _db.SaveChangesAsync();
+
+        // Act
+        var result = await _sut.GetByIdAsync(session.SessionId, OwnerUserId);
+
+        // Assert
+        result!.Description.Should().Be("<p><strong>Already sanitized</strong></p>");
+    }
+
+    [Fact]
+    public async Task GetByIdAsync_ReturnsNullDescription_ForLegacySessionCreatedBeforeFeature()
+    {
+        // Arrange — simulates a pre-existing row where Description was never set (defaults to null),
+        // proving backward compatibility for sessions created before this feature (FR-005/edge cases).
+        var series = BuildSeries();
+        _db.Series.Add(series);
+        var legacySession = BuildSession(series.SeriesId);
+        _db.Sessions.Add(legacySession);
+        await _db.SaveChangesAsync();
+
+        // Act
+        var result = await _sut.GetByIdAsync(legacySession.SessionId, OwnerUserId);
+
+        // Assert
+        result!.Description.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task TwoSessions_InSameSeries_NeverShareOrLeakEachOthersDescription()
+    {
+        // Arrange — FR-007: one session's description must never appear on a different session.
+        var series = BuildSeries();
+        _db.Series.Add(series);
+        var sessionA = BuildSession(series.SeriesId);
+        sessionA.Description = "<p>Session A description</p>";
+        var sessionB = BuildSession(series.SeriesId);
+        sessionB.Description = "<p>Session B description</p>";
+        _db.Sessions.AddRange(sessionA, sessionB);
+        await _db.SaveChangesAsync();
+
+        // Act
+        var resultA = await _sut.GetByIdAsync(sessionA.SessionId, OwnerUserId);
+        var resultB = await _sut.GetByIdAsync(sessionB.SessionId, OwnerUserId);
+
+        // Assert
+        resultA!.Description.Should().Be("<p>Session A description</p>");
+        resultB!.Description.Should().Be("<p>Session B description</p>");
+    }
+
     // ---------- Helpers ----------
 
     private EnableFront.Builder.Domain.Entities.Series BuildSeries(string? ownerOverride = null) =>

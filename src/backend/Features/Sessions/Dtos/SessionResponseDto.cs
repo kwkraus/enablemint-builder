@@ -6,4 +6,5 @@ public record SessionResponseDto(
     string Title,
     DateTime StartsAt,
     DateTime EndsAt,
-    string? RegistrationUrl = null);
+    string? RegistrationUrl = null,
+    string? Description = null);

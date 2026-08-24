@@ -42,7 +42,7 @@ public static class SessionEndpoints
 
                     return Results.BadRequest(new ErrorEnvelope(
                         errorCode ?? "invalid_request",
-                        RegistrationUrlErrorMessage(errorCode) ?? "EndsAt must be after StartsAt.",
+                        SessionErrorMessage(errorCode) ?? "EndsAt must be after StartsAt.",
                         ctx.TraceIdentifier));
                 }
 
@@ -86,7 +86,7 @@ public static class SessionEndpoints
 
                 return Results.BadRequest(new ErrorEnvelope(
                     errorCode ?? "invalid_time_range",
-                    RegistrationUrlErrorMessage(errorCode) ?? "EndsAt must be after StartsAt.",
+                    SessionErrorMessage(errorCode) ?? "EndsAt must be after StartsAt.",
                     ctx.TraceIdentifier));
             }
 
@@ -130,16 +130,20 @@ public static class SessionEndpoints
     }
 
     /// <summary>
-    /// Maps a <see cref="RegistrationUrlValidator"/> error code to a message that
-    /// identifies the <c>registrationUrl</c> field, or <see langword="null"/> when
-    /// <paramref name="errorCode"/> is not a registration URL error.
+    /// Maps a <see cref="SessionService"/> validation error code to a message identifying the
+    /// affected field. Covers <see cref="RegistrationUrlValidator"/> errors and the shared
+    /// description-too-long validation error (see
+    /// specs/003-session-description/contracts/session-description-api.md), returning
+    /// <see langword="null"/> for any other/unrecognized code.
     /// </summary>
-    private static string? RegistrationUrlErrorMessage(string? errorCode) => errorCode switch
+    private static string? SessionErrorMessage(string? errorCode) => errorCode switch
     {
         RegistrationUrlValidator.TooLongErrorCode =>
             $"registrationUrl must be {RegistrationUrlValidator.MaxLength} characters or fewer.",
         RegistrationUrlValidator.InvalidErrorCode =>
             "registrationUrl must be a well-formed absolute http:// or https:// URL.",
+        "validation_error" =>
+            $"Session description must not exceed {SeriesDetailsSanitizer.MaxPlainTextLength:N0} characters.",
         _ => null
     };
 }
