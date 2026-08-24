@@ -69,7 +69,7 @@ export function SeriesVisibilityToggle({
         )}
       </div>
       {error && (
-        <p className="text-xs" style={{ color: 'var(--fgColor-danger)' }}>
+        <p role="alert" className="text-xs" style={{ color: 'var(--fgColor-danger)' }}>
           {error}
         </p>
       )}
