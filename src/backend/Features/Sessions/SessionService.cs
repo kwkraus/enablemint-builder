@@ -1,3 +1,4 @@
+using EnableFront.Builder.Common;
 using EnableFront.Builder.Domain.Entities;
 using EnableFront.Builder.Features.Sessions.Dtos;
 using EnableFront.Builder.Infrastructure.Data;
@@ -62,6 +63,13 @@ public class SessionService
         if (registrationUrlErrorCode is not null)
             return (null, registrationUrlErrorCode);
 
+        // Sanitize (and validate the length of) the description before any entity mutation, so a
+        // rejected create never persists partial content. The sanitizer is the shared, server-side
+        // authority also used by SeriesService (see src/backend/Common/SeriesDetailsSanitizer.cs).
+        var descriptionResult = SeriesDetailsSanitizer.Sanitize(req.Description);
+        if (descriptionResult.ExceedsMaxLength)
+            return (null, "validation_error");
+
         var seriesExists = await _db.Series
             .AnyAsync(s => s.SeriesId == seriesId && s.OwnerUserId == ownerUserId);
         if (!seriesExists)
@@ -75,7 +83,8 @@ public class SessionService
             Title = req.Title,
             StartsAt = req.StartsAt.Kind == DateTimeKind.Utc ? req.StartsAt : req.StartsAt.ToUniversalTime(),
             EndsAt = req.EndsAt.Kind == DateTimeKind.Utc ? req.EndsAt : req.EndsAt.ToUniversalTime(),
-            RegistrationUrl = registrationUrl
+            RegistrationUrl = registrationUrl,
+            Description = descriptionResult.SanitizedHtml
         };
 
         _db.Sessions.Add(session);
@@ -93,6 +102,12 @@ public class SessionService
         if (registrationUrlErrorCode is not null)
             return (null, registrationUrlErrorCode);
 
+        // Sanitize before loading/mutating the session so a rejected update leaves the
+        // previously-saved title, schedule, registration URL, and description untouched.
+        var descriptionResult = SeriesDetailsSanitizer.Sanitize(req.Description);
+        if (descriptionResult.ExceedsMaxLength)
+            return (null, "validation_error");
+
         var session = await _db.Sessions
             .FirstOrDefaultAsync(s => s.SessionId == sessionId && s.OwnerUserId == ownerUserId);
         if (session is null)
@@ -102,6 +117,7 @@ public class SessionService
         session.StartsAt = req.StartsAt.Kind == DateTimeKind.Utc ? req.StartsAt : req.StartsAt.ToUniversalTime();
         session.EndsAt = req.EndsAt.Kind == DateTimeKind.Utc ? req.EndsAt : req.EndsAt.ToUniversalTime();
         session.RegistrationUrl = registrationUrl;
+        session.Description = descriptionResult.SanitizedHtml;
 
         await _db.SaveChangesAsync();
 
@@ -138,5 +154,5 @@ public class SessionService
     // --- Helpers ---
 
     private static SessionResponseDto ToResponseDto(Session s) =>
-        new(s.SessionId, s.SeriesId, s.Title, s.StartsAt, s.EndsAt, s.RegistrationUrl);
+        new(s.SessionId, s.SeriesId, s.Title, s.StartsAt, s.EndsAt, s.RegistrationUrl, s.Description);
 }

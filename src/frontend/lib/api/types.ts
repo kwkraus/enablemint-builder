@@ -35,6 +35,7 @@ export interface SessionResponse {
   startsAt: string
   endsAt: string
   registrationUrl: string | null
+  description: string | null
 }
 
 export interface SeriesMetricsResponse {
