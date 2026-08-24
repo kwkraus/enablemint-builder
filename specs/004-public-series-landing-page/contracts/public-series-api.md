@@ -52,9 +52,9 @@ No query parameters, no request body, no headers required.
 
 ```json
 {
-  "code": "series_not_found",
+  "errorCode": "series_not_found",
   "message": "Series not found.",
-  "traceId": "0HN..."
+  "correlationId": "0HN..."
 }
 ```
 
