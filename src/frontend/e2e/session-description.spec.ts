@@ -122,7 +122,9 @@ async function stubSessionRoutes(page: Page, options: StubOptions) {
       // markup-only content with no decoded text (e.g. a lone "<p><br></p>"
       // left behind by clearing a contentEditable region) saves as null.
       const rawDescription = body.description ?? null
-      const plainText = rawDescription ? rawDescription.replace(/<[^>]*>/g, '').trim() : ''
+      const plainText = rawDescription
+        ? (new DOMParser().parseFromString(rawDescription, 'text/html').body.textContent ?? '').trim()
+        : ''
       currentDescription = plainText.length > 0 ? rawDescription : null
       await route.fulfill({
         status: 200,
