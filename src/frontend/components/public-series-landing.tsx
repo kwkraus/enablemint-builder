@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import Image from 'next/image'
 import { LinkExternalIcon, CalendarIcon, ChevronDownIcon, ChevronUpIcon } from '@primer/octicons-react'
 import { hasSeriesDetails, renderSeriesDetailsHtml } from '@/lib/series-details-html'
 import type { PublicSeriesResponse } from '@/lib/api/types'
@@ -45,13 +44,11 @@ export function PublicSeriesLanding({ series }: Props) {
           already threaded through end-to-end so a future owner-facing image
           picker only needs to set that field -- no other changes required here. */}
       <div className="relative h-40 w-full overflow-hidden sm:h-56 md:h-64">
-        <Image
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
           src={series.imageUrl || DEFAULT_BANNER_SRC}
           alt=""
-          fill
-          priority
-          sizes="100vw"
-          className="object-cover"
+          className="h-full w-full object-cover"
         />
       </div>
 
