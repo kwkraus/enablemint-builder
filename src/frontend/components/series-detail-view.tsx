@@ -84,7 +84,7 @@ export default function SeriesDetailView({ series, sessions, metrics }: Props) {
 
   const [editLoading, setEditLoading] = useState(false)
   const [editError, setEditError] = useState<string | null>(null)
-  const busy = sessionStatus === 'loading' || editLoading
+  const [visibilityLoading, setVisibilityLoading] = useState(false)
 
   useEffect(() => {
     setSeriesTitle(series.title)
@@ -108,6 +108,7 @@ export default function SeriesDetailView({ series, sessions, metrics }: Props) {
   const [seriesDetails, setSeriesDetails] = useState<string | null>(series.details)
   const [detailsLoading, setDetailsLoading] = useState(false)
   const [detailsError, setDetailsError] = useState<string | null>(null)
+  const busy = sessionStatus === 'loading' || editLoading || detailsLoading || visibilityLoading
 
   const [isPublic, setIsPublic] = useState(series.isPublic)
   const [publicUrl, setPublicUrl] = useState('')
@@ -123,13 +124,18 @@ export default function SeriesDetailView({ series, sessions, metrics }: Props) {
   }, [series.seriesId])
 
   async function handleVisibilityChange(nextIsPublic: boolean) {
-    await updateSeries(
-      series.seriesId,
-      { title: seriesTitle, details: seriesDetails ?? undefined, isPublic: nextIsPublic },
-      token,
-    )
-    setIsPublic(nextIsPublic)
-    router.refresh()
+    setVisibilityLoading(true)
+    try {
+      await updateSeries(
+        series.seriesId,
+        { title: seriesTitle, details: seriesDetails ?? undefined, isPublic: nextIsPublic },
+        token,
+      )
+      setIsPublic(nextIsPublic)
+      router.refresh()
+    } finally {
+      setVisibilityLoading(false)
+    }
   }
 
   // The backend only ever returns/updates a series for its owner (see
