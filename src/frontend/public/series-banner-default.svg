@@ -1,0 +1,18 @@
+<svg width="1200" height="400" viewBox="0 0 1200 400" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Default series banner">
+  <defs>
+    <linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#0969da" />
+      <stop offset="100%" stop-color="#54aeff" />
+    </linearGradient>
+    <pattern id="dots" width="28" height="28" patternUnits="userSpaceOnUse">
+      <circle cx="2" cy="2" r="1.6" fill="rgba(255,255,255,0.18)" />
+    </pattern>
+  </defs>
+  <rect width="1200" height="400" fill="url(#g)" />
+  <rect width="1200" height="400" fill="url(#dots)" />
+  <g fill="none" stroke="rgba(255,255,255,0.35)" stroke-width="2">
+    <circle cx="150" cy="90" r="46" />
+    <circle cx="1060" cy="310" r="70" />
+    <circle cx="980" cy="70" r="24" />
+  </g>
+</svg>

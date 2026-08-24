@@ -10,6 +10,7 @@ import { ErrorBanner } from '@/components/error-banner'
 import { ConfirmDialog } from '@/components/confirm-dialog'
 import { InlineEditableTitle } from '@/components/inline-editable-title'
 import { SeriesDetails } from '@/components/series-details'
+import { SeriesVisibilityToggle } from '@/components/series-visibility-toggle'
 import { MetricsPanel } from '@/components/metrics-panel'
 import { updateSeries, deleteSeries, exportSeriesMarkdown } from '@/lib/api/series'
 import { deleteSession } from '@/lib/api/sessions'
@@ -83,7 +84,7 @@ export default function SeriesDetailView({ series, sessions, metrics }: Props) {
 
   const [editLoading, setEditLoading] = useState(false)
   const [editError, setEditError] = useState<string | null>(null)
-  const busy = sessionStatus === 'loading' || editLoading
+  const [visibilityLoading, setVisibilityLoading] = useState(false)
 
   useEffect(() => {
     setSeriesTitle(series.title)
@@ -107,6 +108,35 @@ export default function SeriesDetailView({ series, sessions, metrics }: Props) {
   const [seriesDetails, setSeriesDetails] = useState<string | null>(series.details)
   const [detailsLoading, setDetailsLoading] = useState(false)
   const [detailsError, setDetailsError] = useState<string | null>(null)
+  const busy = sessionStatus === 'loading' || editLoading || detailsLoading || visibilityLoading
+
+  const [isPublic, setIsPublic] = useState(series.isPublic)
+  const [publicUrl, setPublicUrl] = useState('')
+
+  useEffect(() => {
+    setIsPublic(series.isPublic)
+  }, [series.isPublic])
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setPublicUrl(`${window.location.origin}/public/series/${series.seriesId}`)
+    }
+  }, [series.seriesId])
+
+  async function handleVisibilityChange(nextIsPublic: boolean) {
+    setVisibilityLoading(true)
+    try {
+      await updateSeries(
+        series.seriesId,
+        { title: seriesTitle, details: seriesDetails ?? undefined, isPublic: nextIsPublic },
+        token,
+      )
+      setIsPublic(nextIsPublic)
+      router.refresh()
+    } finally {
+      setVisibilityLoading(false)
+    }
+  }
 
   // The backend only ever returns/updates a series for its owner (see
   // specs/001-series-details/research.md Decision 4) -- there is no
@@ -241,6 +271,13 @@ export default function SeriesDetailView({ series, sessions, metrics }: Props) {
         canEdit={canEditDetails}
         onSave={handleDetailsSave}
         saving={detailsLoading}
+        disabled={busy}
+      />
+
+      <SeriesVisibilityToggle
+        checked={isPublic}
+        publicUrl={publicUrl}
+        onChange={handleVisibilityChange}
         disabled={busy}
       />
 
