@@ -22,6 +22,7 @@ dist/
 build/
 coverage/
 test-results/
+.playwright-mcp/
 __pycache__/
 .next/
 
