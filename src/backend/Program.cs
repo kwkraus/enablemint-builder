@@ -26,8 +26,17 @@ if (!string.IsNullOrWhiteSpace(appInsightsConnectionString))
     builder.Services.AddApplicationInsightsTelemetry();
 }
 
+var sqlDatabaseOptions = builder.Configuration
+    .GetSection(SqlDatabaseOptions.SectionName)
+    .Get<SqlDatabaseOptions>()
+    ?? throw new InvalidOperationException(
+        $"Missing required '{SqlDatabaseOptions.SectionName}' configuration section.");
+var sqlConnectionString = SqlDatabaseConnectionStringFactory.Create(sqlDatabaseOptions);
+
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+    options.UseSqlServer(sqlConnectionString));
+
+builder.Services.AddHealthChecks();
 
 // Authentication & Authorization (Entra ID / Azure AD)
 builder.Services.AddMicrosoftIdentityWebApiAuthentication(builder.Configuration)
@@ -116,6 +125,8 @@ app.UseCors();
 
 app.UseAuthentication();
 app.UseAuthorization();
+
+app.MapHealthChecks("/health");
 
 app.MapGet("/api/time", () =>
 {
