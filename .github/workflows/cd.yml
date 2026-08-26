@@ -21,6 +21,8 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'workflow_run' && github.event.workflow_run.head_sha || github.sha }}
 
       - name: Install azd
         uses: Azure/setup-azd@v1.0.0
@@ -67,7 +69,8 @@ jobs:
             -ResourceGroup $env:AZURE_RESOURCE_GROUP `
             -SqlServerName $env:AZURE_SQL_SERVER_NAME `
             -DatabaseName $env:AZURE_SQL_DATABASE_NAME `
-            -VnetName $env:AZURE_VNET_NAME
+            -VnetName $env:AZURE_VNET_NAME `
+            -MigrationIdentityResourceId ${{ secrets.AZURE_MIGRATION_IDENTITY_RESOURCE_ID }}
 
       - name: Deploy Applications
         run: azd deploy --all --no-prompt

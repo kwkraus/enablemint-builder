@@ -30,6 +30,9 @@ param(
     [Parameter(Mandatory)]
     [string]$VnetName,
 
+    [Parameter(Mandatory)]
+    [string]$MigrationIdentityResourceId,
+
     [Parameter()]
     [string]$SubnetName = 'snet-container',
 
@@ -71,6 +74,11 @@ if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($location)) {
     throw "Could not resolve location for resource group '$ResourceGroup'."
 }
 
+$identityId = $MigrationIdentityResourceId.Trim()
+if ($identityId -notmatch '^/subscriptions/[^/]+/resourceGroups/[^/]+/providers/Microsoft.ManagedIdentity/userAssignedIdentities/[^/]+$') {
+    throw "Migration identity resource ID must reference a user-assigned managed identity."
+}
+
 $connectionString = "Server=tcp:$SqlServerName.database.windows.net,1433;Initial Catalog=$DatabaseName;Authentication=Active Directory Managed Identity;Encrypt=True;TrustServerCertificate=False;"
 
 Write-Host "Creating ephemeral migration runner container '$ContainerGroupName' in subnet '$SubnetName'..." -ForegroundColor Cyan
@@ -79,6 +87,12 @@ $rawScript = "echo Starting EF Core Migration... && git clone https://github.com
 
 $aciSpec = @{
     location = $location
+    identity = @{
+        type = 'UserAssigned'
+        userAssignedIdentities = @{
+            $identityId = @{}
+        }
+    }
     properties = @{
         osType = 'Linux'
         restartPolicy = 'Never'

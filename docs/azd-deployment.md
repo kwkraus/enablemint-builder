@@ -27,6 +27,8 @@ azd env set SQL_ADMINISTRATOR_LOGIN "<administrator-upn>"
 azd env set SQL_ADMINISTRATOR_OBJECT_ID "<administrator-object-id>"
 ```
 
+The CD workflow also requires `AZURE_MIGRATION_IDENTITY_RESOURCE_ID`, set to the resource ID of a user-assigned managed identity. Create or reuse that identity, grant it access with `tools/grant-migration-identity-access.ps1`, and store its resource ID as a GitHub Actions secret before running CD.
+
 `infra/main.parameters.json` maps these azd environment variables to the required Bicep parameters. The secret inputs are Bicep secure parameters, but `azd env set` writes values into the local `.azure/<environment>/.env` file. Use a protected local environment or `azd env set-secret` with Azure Key Vault rather than sharing that file.
 
 The default development deployment provisions a private network for Azure SQL: a virtual network (`vnet-enb-*`) with a private endpoint for the SQL server (`publicNetworkAccess: 'Disabled'`) and a `snet-appservice` subnet used for regional VNet integration on the API App Service. **This subscription enforces `publicNetworkAccess: Disabled` on Azure SQL logical servers at the platform level** — an explicit `Enabled` value in Bicep is silently reverted, so public firewall rules are not usable here. If your subscription does not have this restriction, you can simplify by removing the VNet/private-endpoint modules and re-adding public firewall rules instead.
@@ -94,7 +96,8 @@ In PowerShell or GitHub Actions, you can pass the dynamic variables exported dir
   -ResourceGroup $env:AZURE_RESOURCE_GROUP `
   -SqlServerName $env:AZURE_SQL_SERVER_NAME `
   -DatabaseName $env:AZURE_SQL_DATABASE_NAME `
-  -VnetName $env:AZURE_VNET_NAME
+  -VnetName $env:AZURE_VNET_NAME `
+  -MigrationIdentityResourceId "<user-assigned-identity-resource-id>"
 ```
 
 The script spins up a temporary container in `snet-container`, connects to Azure SQL over the private endpoint, executes pending EF Core migrations, streams container logs, verifies the zero exit code, and cleans up the container instance.
