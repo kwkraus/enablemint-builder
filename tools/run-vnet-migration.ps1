@@ -67,7 +67,7 @@ if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($location)) {
     throw "Could not resolve location for resource group '$ResourceGroup'."
 }
 
-$connectionString = "Server=tcp:$SqlServerName.database.windows.net,1433;Initial Catalog=$DatabaseName;Authentication=Active Directory Default;Encrypt=True;TrustServerCertificate=False;"
+$connectionString = "Server=tcp:$SqlServerName.database.windows.net,1433;Initial Catalog=$DatabaseName;Authentication=Active Directory Managed Identity;Encrypt=True;TrustServerCertificate=False;"
 
 Write-Host "Creating ephemeral migration runner container '$ContainerGroupName' in subnet '$SubnetName'..." -ForegroundColor Cyan
 
