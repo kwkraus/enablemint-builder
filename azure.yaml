@@ -1,0 +1,23 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/Azure/azure-dev/main/schemas/v1.0/azure.yaml.json
+
+name: enablemint-builder
+metadata:
+  template: azd-init@1.31.2
+infra:
+  provider: bicep
+  path: infra
+  module: main
+workflows:
+  up:
+    steps:
+      - azd: provision
+      - azd: deploy --all
+services:
+  frontend:
+    project: ./src/frontend
+    language: js
+    host: appservice
+  api:
+    project: ./src/backend
+    language: csharp
+    host: appservice

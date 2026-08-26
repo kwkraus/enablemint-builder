@@ -36,3 +36,4 @@ packages/
 # temporary files
 *.tmp
 *.swp
+.azure
