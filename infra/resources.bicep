@@ -80,7 +80,7 @@ module virtualNetwork 'br/public:avm/res/network/virtual-network:0.10.2' = {
   params: {
     name: names.virtualNetwork
     location: location
-    addressPrefixes: ['10.20.0.0/23']
+    addressPrefixes: ['10.20.0.0/22']
     subnets: [
       {
         name: 'snet-appservice'
@@ -91,6 +91,11 @@ module virtualNetwork 'br/public:avm/res/network/virtual-network:0.10.2' = {
         name: 'snet-privateendpoints'
         addressPrefix: '10.20.1.0/24'
         privateEndpointNetworkPolicies: 'Disabled'
+      }
+      {
+        name: 'snet-container'
+        addressPrefix: '10.20.2.0/24'
+        delegation: 'Microsoft.ContainerInstance/containerGroups'
       }
     ]
     tags: tags
@@ -268,3 +273,4 @@ output frontendAppName string = frontendAppResource.name
 output frontendEndpoint string = 'https://${frontendAppResource.properties.defaultHostName}'
 output sqlDatabaseName string = names.sqlDatabase
 output sqlServerName string = sqlServerResource.name
+output virtualNetworkName string = virtualNetworkResource.name
