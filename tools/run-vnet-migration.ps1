@@ -37,10 +37,14 @@ param(
     [string]$ImageName = 'mcr.microsoft.com/dotnet/sdk:10.0-preview',
 
     [Parameter()]
-    [string]$ContainerGroupName = 'aci-ef-migration-runner'
+    [string]$ContainerGroupName
 )
 
 $ErrorActionPreference = 'Stop'
+
+if ([string]::IsNullOrWhiteSpace($ContainerGroupName)) {
+    $ContainerGroupName = "aci-ef-migration-runner-$([Guid]::NewGuid().ToString('N').Substring(0, 8))"
+}
 
 if (-not (Get-Command 'az' -ErrorAction SilentlyContinue)) {
     throw "Required command 'az' was not found. Install Azure CLI and try again."
