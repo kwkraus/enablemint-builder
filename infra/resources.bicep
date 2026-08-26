@@ -225,10 +225,7 @@ module apiApp 'br/public:avm/res/web/site:0.24.0' = {
           AzureAd__Instance: environment().authentication.loginEndpoint
           AzureAd__TenantId: azureAdTenantId
           Cors__AllowedOrigins__0: 'https://${names.frontendApp}.azurewebsites.net'
-          SqlDatabase__Authentication: 'ActiveDirectoryDefault'
-          SqlDatabase__Database: names.sqlDatabase
-          SqlDatabase__Server: '${names.sqlServer}.${environment().suffixes.sqlServerHostname}'
-          SqlDatabase__TrustServerCertificate: 'false'
+          ConnectionStrings__DefaultConnection: 'Server=tcp:${names.sqlServer}.${environment().suffixes.sqlServerHostname},1433;Initial Catalog=${names.sqlDatabase};Authentication=Active Directory Default;Encrypt=True;TrustServerCertificate=False;'
         }
       }
     ]

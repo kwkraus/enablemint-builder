@@ -27049,10 +27049,7 @@
                           "AzureAd__Instance": "[environment().authentication.loginEndpoint]",
                           "AzureAd__TenantId": "[parameters('azureAdTenantId')]",
                           "Cors__AllowedOrigins__0": "[format('https://{0}.azurewebsites.net', parameters('names').frontendApp)]",
-                          "SqlDatabase__Authentication": "ActiveDirectoryDefault",
-                          "SqlDatabase__Database": "[parameters('names').sqlDatabase]",
-                          "SqlDatabase__Server": "[format('{0}.{1}', parameters('names').sqlServer, environment().suffixes.sqlServerHostname)]",
-                          "SqlDatabase__TrustServerCertificate": "false"
+                          "ConnectionStrings__DefaultConnection": "[format('Server=tcp:{0}.{1},1433;Initial Catalog={2};Authentication=Active Directory Default;Encrypt=True;TrustServerCertificate=False;', parameters('names').sqlServer, environment().suffixes.sqlServerHostname, parameters('names').sqlDatabase)]"
                         }
                       }
                     ]

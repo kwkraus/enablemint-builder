@@ -77,4 +77,4 @@ Database schema changes are not run as an azd hook. Use an authorized developer 
 dotnet ef database update --project src/backend/EnableFront.Builder.Api.csproj
 ```
 
-The API uses `SqlDatabase` settings rather than a configured connection string. In Azure, its `ActiveDirectoryDefault` setting makes `Microsoft.Data.SqlClient` acquire an Azure SQL token from the API App Service system-assigned managed identity. Local development preserves the integrated SQL Express configuration in `src/backend/appsettings.json`.
+The API uses the `DefaultConnection` connection string. In Azure, `Authentication=Active Directory Default` in the connection string makes `Microsoft.Data.SqlClient` acquire an Azure SQL token from the API App Service system-assigned managed identity. Local development uses integrated Windows authentication (`Integrated Security=True`) in `src/backend/appsettings.json`.
