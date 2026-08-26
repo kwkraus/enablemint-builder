@@ -21,6 +21,10 @@ For local development, point the frontend at the backend running on http://local
 - `BACKEND_API_BASE_URL=http://localhost:5187`
 - `NEXT_PUBLIC_BACKEND_API_BASE_URL=http://localhost:5187`
 
+## Azure deployment
+
+The frontend is deployed as a hybrid Next.js application on Azure App Service. `azd` supplies the backend URL as deployment output, so `NEXT_PUBLIC_BACKEND_API_BASE_URL` is available while `next build` runs without a custom package hook. See [the deployment guide](../../docs/azd-deployment.md) for the required environment variables and provisioning sequence.
+
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.

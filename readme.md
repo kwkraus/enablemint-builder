@@ -60,7 +60,7 @@ Enablemint Builder is a **webinar management platform** for local event planning
 | Database | Azure SQL |
 | Auth | Microsoft Entra ID (next-auth, single-tenant) |
 | Graph integration | Microsoft Graph v1 — OBO flow for signed-in user's profile photo (`/me/photo`) |
-| Hosting | Azure App Service |
+| Hosting | Azure App Service (provisioned with Azure Developer CLI) |
 
 ---
 
@@ -106,3 +106,7 @@ Required delegated permissions:
 Exposed API scope: `api://{ClientId}/access_as_user` (frontend → backend token exchange).
 
 This phase removes Teams webinar publish/sync API dependencies so installs do not require Teams webinar app registration consent paths.
+
+## Azure deployment
+
+See [docs/azd-deployment.md](docs/azd-deployment.md) for the Azure Developer CLI workflow, AVM-based infrastructure, passwordless Azure SQL access, and EF Core migration process.
