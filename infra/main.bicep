@@ -97,6 +97,7 @@ output APPLICATIONINSIGHTS_CONNECTION_STRING string = resources.outputs.applicat
 output AZURE_RESOURCE_GROUP string = resourceGroup.name
 output AZURE_SQL_DATABASE_NAME string = resources.outputs.sqlDatabaseName
 output AZURE_SQL_SERVER_NAME string = resources.outputs.sqlServerName
+output AZURE_VNET_NAME string = resources.outputs.virtualNetworkName
 output BACKEND_API_BASE_URL string = resources.outputs.apiEndpoint
 output FRONTEND_APP_NAME string = resources.outputs.frontendAppName
 output FRONTEND_ENDPOINT string = resources.outputs.frontendEndpoint

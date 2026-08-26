@@ -55,23 +55,56 @@ Because Azure SQL only accepts connections through the private endpoint, `sqlcmd
 - A workstation already routed to the VNet through your organization's ExpressRoute/VPN peering (common on corporate networks; ask your network team if the VNet needs an explicit peering or route).
 - A temporary jump box or Azure Bastion host deployed into the `snet-privateendpoints` (or a new) subnet of the same VNet, used only for this one-time step and then removed.
 
-After provisioning, grant the API's system-assigned managed identity its runtime database permissions:
+After provisioning, grant the API's system-assigned managed identity its runtime database permissions (using dynamic environment variables exported from `azd provision`):
 
 ```powershell
+# Sourced dynamically from azd environment variables
 .\tools\grant-api-sql-database-access.ps1 `
-  -ResourceGroup "<AZURE_RESOURCE_GROUP>" `
-  -ApiAppName "<API_APP_NAME>" `
-  -SqlServerName "<AZURE_SQL_SERVER_NAME>" `
-  -DatabaseName "<AZURE_SQL_DATABASE_NAME>"
+  -ResourceGroup $env:AZURE_RESOURCE_GROUP `
+  -ApiAppName $env:API_APP_NAME `
+  -SqlServerName $env:AZURE_SQL_SERVER_NAME `
+  -DatabaseName $env:AZURE_SQL_DATABASE_NAME
 ```
 
 The script uses Microsoft Entra authentication (`sqlcmd -G`) and grants only `db_datareader` and `db_datawriter`. It intentionally does not grant DDL permissions to the running API.
 
 The account running the script must be the Azure SQL Microsoft Entra administrator or a database owner. Azure SQL must also be able to resolve the API App Service managed identity in Microsoft Entra ID; assign the SQL server identity the required directory-read permissions before running the script when your tenant requires it.
 
+## Grant migration identity access
+
+If using a dedicated migration identity (such as a Service Principal or User-Assigned Managed Identity for CI/CD), grant it `db_ddladmin`, `db_datareader`, and `db_datawriter` permissions using:
+
+```powershell
+.\tools\grant-migration-identity-access.ps1 `
+  -IdentityDisplayName "<MIGRATION_IDENTITY_NAME>" `
+  -SqlServerName $env:AZURE_SQL_SERVER_NAME `
+  -DatabaseName $env:AZURE_SQL_DATABASE_NAME
+```
+
 ## Apply EF Core migrations
 
-Database schema changes are not run as an azd hook. Use an authorized developer or CI/CD identity with the required database DDL permissions, run from the same network-connected host described above:
+Because Azure SQL enforces `publicNetworkAccess: Disabled` and GitHub-hosted runners cannot reach private endpoints directly, database migrations can be executed inside the virtual network using an ephemeral Azure Container Instance (injected into `snet-container` subnet).
+
+In PowerShell or GitHub Actions, you can pass the dynamic variables exported directly from `azd`:
+
+```powershell
+.\tools\run-vnet-migration.ps1 `
+  -ResourceGroup $env:AZURE_RESOURCE_GROUP `
+  -SqlServerName $env:AZURE_SQL_SERVER_NAME `
+  -DatabaseName $env:AZURE_SQL_DATABASE_NAME `
+  -VnetName $env:AZURE_VNET_NAME
+```
+
+The script spins up a temporary container in `snet-container`, connects to Azure SQL over the private endpoint, executes pending EF Core migrations, streams container logs, verifies the zero exit code, and cleans up the container instance.
+
+## Continuous Delivery Pipeline (.github/workflows/cd.yml)
+
+Automated deployments to Azure are handled by `.github/workflows/cd.yml`.
+
+- **CI (`.github/workflows/ci.yml`)**: Runs on pull requests and pushes to `master`. Performs linting, compilation, unit testing, and verifies migration bundle generation. Does **not** alter Azure resources or databases.
+- **CD (`.github/workflows/cd.yml`)**: Triggers automatically via the `workflow_run` event **only after CI successfully completes on `master`** (or via manual `workflow_dispatch`). If CI fails, CD is skipped. It authenticates with Azure via OIDC, runs `azd provision`, executes `tools/run-vnet-migration.ps1` inside `snet-container`, and deploys application code via `azd deploy`.
+
+Alternatively, schema changes can be applied manually by an authorized developer identity connected to the virtual network:
 
 ```powershell
 dotnet ef database update --project src/backend/EnableFront.Builder.Api.csproj

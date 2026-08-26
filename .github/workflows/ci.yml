@@ -32,6 +32,18 @@ jobs:
         run: dotnet test tests/backend/EnableFront.Builder.Api.Tests/EnableFront.Builder.Api.Tests.csproj --configuration Release --verbosity normal
         working-directory: ${{ github.workspace }}
 
+      - name: Install EF Tool
+        run: dotnet tool install --global dotnet-ef
+
+      - name: Build Migration Bundle
+        run: dotnet ef migrations bundle --project EnableFront.Builder.Api.csproj --output efbundle --self-contained -r linux-x64 --configuration Release
+
+      - name: Upload Migration Bundle Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: efbundle-linux-x64
+          path: src/backend/efbundle
+
   frontend:
     name: Frontend — Lint & Build
     runs-on: ubuntu-latest
