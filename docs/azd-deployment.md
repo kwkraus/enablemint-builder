@@ -85,6 +85,8 @@ If using a dedicated migration identity (such as a Service Principal or User-Ass
 
 Because Azure SQL enforces `publicNetworkAccess: Disabled` and GitHub-hosted runners cannot reach private endpoints directly, database migrations can be executed inside the virtual network using an ephemeral Azure Container Instance (injected into `snet-container` subnet).
 
+The container group must run under a **dedicated migration identity** (for example, a user-assigned managed identity) that has been granted `db_ddladmin`/`db_datareader`/`db_datawriter`, and its resource ID must be provided to the migration runner (e.g., via `AZURE_MIGRATION_IDENTITY_RESOURCE_ID` in CI/CD).
+
 In PowerShell or GitHub Actions, you can pass the dynamic variables exported directly from `azd`:
 
 ```powershell
