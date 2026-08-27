@@ -70,7 +70,8 @@ jobs:
             -SqlServerName $env:AZURE_SQL_SERVER_NAME `
             -DatabaseName $env:AZURE_SQL_DATABASE_NAME `
             -VnetName $env:AZURE_VNET_NAME `
-            -MigrationIdentityResourceId ${{ secrets.AZURE_MIGRATION_IDENTITY_RESOURCE_ID }}
+            -MigrationIdentityResourceId $env:MIGRATION_IDENTITY_RESOURCE_ID `
+            -ApiAppName $env:API_APP_NAME
 
       - name: Deploy Applications
         run: azd deploy --all --no-prompt
