@@ -19,12 +19,6 @@
     },
     "nextAuthSecret": {
       "value": "${NEXTAUTH_SECRET}"
-    },
-    "sqlAdministratorLogin": {
-      "value": "${SQL_ADMINISTRATOR_LOGIN}"
-    },
-    "sqlAdministratorObjectId": {
-      "value": "${SQL_ADMINISTRATOR_OBJECT_ID}"
     }
   }
 }

@@ -7,9 +7,10 @@ Creates an idempotent contained database user for the designated migration ident
 and grants db_owner. The invoking user must be an Azure SQL Microsoft Entra administrator or database owner.
 This script never accepts, generates, or stores SQL credentials.
 
-This is a one-time bootstrap per environment: run it once after the migration identity and database first exist (created together by
-`azd provision`), then tools/run-vnet-migration.ps1 can run unattended in CI/CD from then on - db_owner is enough for that job to also grant
-the API app's own identity access on every run, without any further manual steps.
+This is no longer part of the normal deployment flow: infra/resources.bicep configures the migration identity as the SQL logical
+server's Microsoft Entra administrator at provisioning time, which already gives it dbo authority in every database on the server.
+Keep this script for recovery scenarios - for example if the server's Entra administrator is repointed at another principal and the
+migration identity needs an explicit contained user instead.
 
 .NOTES
 Azure SQL is reachable only through a private endpoint in this deployment (publicNetworkAccess is Disabled).
