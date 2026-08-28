@@ -67,5 +67,20 @@ jobs:
         run: |
           azd env get-values --output json | jq -r 'to_entries[] | "\(.key)=\(.value)"' >> "$GITHUB_ENV"
 
+      - name: Run Ephemeral VNet Database Migration
+        shell: pwsh
+        env:
+          APPLICATIONINSIGHTS_CONNECTION_STRING: ""
+          POWERSHELL_TELEMETRY_OPTOUT: "1"
+        run: |
+          .\tools\run-vnet-migration.ps1 `
+            -ResourceGroup $env:AZURE_RESOURCE_GROUP `
+            -SqlServerName $env:AZURE_SQL_SERVER_NAME `
+            -DatabaseName $env:AZURE_SQL_DATABASE_NAME `
+            -VnetName $env:AZURE_VNET_NAME `
+            -MigrationIdentityResourceId $env:MIGRATION_IDENTITY_RESOURCE_ID `
+            -ApiAppName $env:API_APP_NAME `
+            -ImageName 'mcr.microsoft.com/dotnet/sdk:10.0'
+
       - name: Deploy Applications
         run: azd deploy --all --no-prompt

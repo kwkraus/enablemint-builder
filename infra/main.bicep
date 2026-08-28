@@ -46,6 +46,9 @@ type ResourceNames = {
   logAnalytics: string
   sqlDatabase: string
   sqlServer: string
+  virtualNetwork: string
+  sqlPrivateEndpoint: string
+  migrationIdentity: string
 }
 
 var suffix = toLower(uniqueString(subscription().id, resourceGroupName, environmentName))
@@ -57,6 +60,9 @@ var names ResourceNames = {
   logAnalytics: 'log-enb-${suffix}'
   sqlDatabase: 'enablemint'
   sqlServer: take('sqlenb${suffix}', 63)
+  virtualNetwork: 'vnet-enb-${suffix}'
+  sqlPrivateEndpoint: 'pep-sql-enb-${suffix}'
+  migrationIdentity: 'id-migration-enb-${suffix}'
 }
 var tags = {
   'azd-env-name': environmentName
@@ -93,7 +99,10 @@ output APPLICATIONINSIGHTS_CONNECTION_STRING string = resources.outputs.applicat
 output AZURE_RESOURCE_GROUP string = resourceGroup.name
 output AZURE_SQL_DATABASE_NAME string = resources.outputs.sqlDatabaseName
 output AZURE_SQL_SERVER_NAME string = resources.outputs.sqlServerName
+output AZURE_VNET_NAME string = resources.outputs.virtualNetworkName
 output BACKEND_API_BASE_URL string = resources.outputs.apiEndpoint
 output FRONTEND_APP_NAME string = resources.outputs.frontendAppName
 output FRONTEND_ENDPOINT string = resources.outputs.frontendEndpoint
 output NEXT_PUBLIC_BACKEND_API_BASE_URL string = resources.outputs.apiEndpoint
+output MIGRATION_IDENTITY_RESOURCE_ID string = resources.outputs.migrationIdentityResourceId
+output MIGRATION_IDENTITY_NAME string = resources.outputs.migrationIdentityName
