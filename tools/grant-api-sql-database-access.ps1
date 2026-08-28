@@ -7,10 +7,15 @@ Creates an idempotent contained database user for the API's system-assigned mana
 grants only db_datareader and db_datawriter. The invoking user must be an Azure SQL Microsoft Entra
 administrator or database owner. This script never accepts, generates, or stores SQL credentials.
 
+NOTE: tools/run-vnet-migration.ps1 now grants this same access automatically on every migration run
+(using the migration identity's db_owner privileges). This script is kept only as a manual fallback
+for environments where the automated migration job hasn't run yet or isn't in use.
+
 .NOTES
-Azure SQL public access is enabled with the Azure-services firewall rule. Run this script from a
-host that can reach the Azure SQL endpoint and is permitted by any additional firewall rules.
-See docs/azd-deployment.md for details.
+Azure SQL is reachable only through a private endpoint in this deployment (publicNetworkAccess is
+Disabled). Run this script from a host with network access to the deployed virtual network
+(vnet-enb-*) - for example a corporate network already peered/routed to the VNet, or the disposable
+container shell in tools/bootstrap-vnet-shell.ps1. See docs/azd-deployment.md for details.
 
 This script must be run interactively by a human, not from an unattended/headless session. Pass
 -AdminUpn <your-upn> to force Microsoft Entra interactive (browser/MFA) authentication; without it,
