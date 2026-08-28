@@ -24,8 +24,8 @@ what allows this job to also grant the API identity's permissions in the same ru
 
 [CmdletBinding()]
 param(
-    [Parameter(Mandatory)]
-    [string]$ResourceGroup,
+    [Parameter()]
+    [string]$ResourceGroup = '',
 
     [Parameter(Mandatory)]
     [string]$SqlServerName,
@@ -54,6 +54,37 @@ param(
 
 $ErrorActionPreference = 'Stop'
 
+function Resolve-ResourceGroupForVnet {
+    param(
+        [Parameter(Mandatory)]
+        [string]$VnetName,
+
+        [Parameter()]
+        [string]$RequestedResourceGroup = ''
+    )
+
+    if (-not [string]::IsNullOrWhiteSpace($RequestedResourceGroup)) {
+        $resourceGroupExists = az group exists --name $RequestedResourceGroup --output tsv 2>$null
+        if ($LASTEXITCODE -eq 0 -and $resourceGroupExists -eq 'true') {
+            return $RequestedResourceGroup
+        }
+    }
+
+    $candidateResourceGroups = @(az group list --query "[].name" --output tsv 2>$null)
+    foreach ($candidate in $candidateResourceGroups) {
+        if ([string]::IsNullOrWhiteSpace($candidate)) {
+            continue
+        }
+
+        $vnetId = az network vnet show --resource-group $candidate --name $VnetName --query id --output tsv 2>$null
+        if ($LASTEXITCODE -eq 0 -and -not [string]::IsNullOrWhiteSpace($vnetId)) {
+            return $candidate
+        }
+    }
+
+    return $null
+}
+
 if ([string]::IsNullOrWhiteSpace($ContainerGroupName)) {
     $ContainerGroupName = "aci-ef-migration-runner-$([Guid]::NewGuid().ToString('N').Substring(0, 8))"
 }
@@ -61,6 +92,17 @@ if ([string]::IsNullOrWhiteSpace($ContainerGroupName)) {
 if (-not (Get-Command 'az' -ErrorAction SilentlyContinue)) {
     throw "Required command 'az' was not found. Install Azure CLI and try again."
 }
+
+$resolvedResourceGroup = Resolve-ResourceGroupForVnet -VnetName $VnetName -RequestedResourceGroup $ResourceGroup
+if ([string]::IsNullOrWhiteSpace($resolvedResourceGroup)) {
+    throw "Could not locate a resource group containing VNet '$VnetName'. Ensure the azd environment is current and the provision step created the networking resources."
+}
+
+if (-not [string]::IsNullOrWhiteSpace($ResourceGroup) -and $ResourceGroup -ne $resolvedResourceGroup) {
+    Write-Host "Requested resource group '$ResourceGroup' was not found; falling back to '$resolvedResourceGroup' discovered via VNet lookup." -ForegroundColor Yellow
+}
+
+$ResourceGroup = $resolvedResourceGroup
 
 Write-Host "Resolving VNet subnet '$SubnetName' in VNet '$VnetName'..." -ForegroundColor Cyan
 
