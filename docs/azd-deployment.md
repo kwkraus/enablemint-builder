@@ -145,7 +145,7 @@ This creates a short-lived Azure Container Instance and attaches an interactive 
 Automated deployments to Azure are handled by `.github/workflows/cd.yml`.
 
 - **CI (`.github/workflows/ci.yml`)**: Runs on pull requests and pushes to `master`. Performs linting, compilation, unit testing, and verifies migration bundle generation. Does **not** alter Azure resources or databases.
-- **CD (`.github/workflows/cd.yml`)**: Triggers automatically via the `workflow_run` event **only after CI successfully completes on `master`** (or via manual `workflow_dispatch`). If CI fails, CD is skipped. It authenticates with Azure via OIDC, runs `azd provision`, executes `tools/run-vnet-migration.ps1` inside `snet-container`, and deploys application code via `azd deploy`.
+- **CD (`.github/workflows/cd.yml`)**: Triggers automatically via the `workflow_run` event **only after CI successfully completes on `master`** (or via manual `workflow_dispatch`). If CI fails, CD is skipped. It authenticates with Azure via OIDC and configures `azd` to reuse the Azure CLI credential, runs `azd provision`, executes `tools/run-vnet-migration.ps1` inside `snet-container`, and deploys application code via `azd deploy`.
 
 Alternatively, schema changes can be applied manually by an authorized developer identity connected to the virtual network:
 

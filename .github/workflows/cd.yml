@@ -46,6 +46,9 @@ jobs:
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
           subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
 
+      - name: Configure azd authentication
+        run: azd config set auth.useAzCliAuth true
+
       - name: Provision Infrastructure
         run: azd provision --no-prompt
         env:
