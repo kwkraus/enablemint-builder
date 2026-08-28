@@ -142,7 +142,12 @@ if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($identityClientId)) {
     throw "Could not resolve client ID for migration identity '$identityId'."
 }
 
-$connectionString = "Server=tcp:$SqlServerName.database.windows.net,1433;Initial Catalog=$DatabaseName;Authentication=Active Directory Managed Identity;Encrypt=True;TrustServerCertificate=False;"
+
+# User Id must be pinned to the migration identity's client ID: the container only has this
+# user-assigned identity attached (no system-assigned identity), so leaving it unspecified makes
+# the token request ambiguous and can surface as "Login failed ... server not configured to accept
+# this token" instead of a clean identity error.
+$connectionString = "Server=tcp:$SqlServerName.database.windows.net,1433;Initial Catalog=$DatabaseName;Authentication=Active Directory Managed Identity;User Id=$identityClientId;Encrypt=True;TrustServerCertificate=False;"
 
 Write-Host "Creating ephemeral migration runner container '$ContainerGroupName' in subnet '$SubnetName'..." -ForegroundColor Cyan
 
