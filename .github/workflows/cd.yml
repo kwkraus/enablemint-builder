@@ -79,7 +79,8 @@ jobs:
             -DatabaseName $env:AZURE_SQL_DATABASE_NAME `
             -VnetName $env:AZURE_VNET_NAME `
             -MigrationIdentityResourceId $env:MIGRATION_IDENTITY_RESOURCE_ID `
-            -ApiAppName $env:API_APP_NAME
+            -ApiAppName $env:API_APP_NAME `
+            -ImageName 'mcr.microsoft.com/dotnet/sdk:10.0'
 
       - name: Deploy Applications
         run: azd deploy --all --no-prompt

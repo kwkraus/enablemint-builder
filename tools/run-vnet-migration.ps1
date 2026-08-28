@@ -46,7 +46,7 @@ param(
     [string]$SubnetName = 'snet-container',
 
     [Parameter()]
-    [string]$ImageName = 'mcr.microsoft.com/dotnet/sdk:10.0-preview',
+    [string]$ImageName = 'mcr.microsoft.com/dotnet/sdk:10.0',
 
     [Parameter()]
     [string]$ContainerGroupName
