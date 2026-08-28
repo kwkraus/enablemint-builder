@@ -21,6 +21,7 @@ type ResourceNames = {
   sqlServer: string
   virtualNetwork: string
   sqlPrivateEndpoint: string
+  migrationIdentity: string
 }
 
 param names ResourceNames
@@ -105,6 +106,15 @@ module virtualNetwork 'br/public:avm/res/network/virtual-network:0.10.2' = {
 resource virtualNetworkResource 'Microsoft.Network/virtualNetworks@2024-05-01' existing = {
   name: names.virtualNetwork
   dependsOn: [virtualNetwork]
+}
+
+// Dedicated identity for the ephemeral EF Core migration container job (see tools/run-vnet-migration.ps1).
+// Its Azure SQL db_owner grant is a one-time manual bootstrap (tools/grant-migration-identity-access.ps1);
+// Bicep only owns the identity's lifecycle, not its database permissions.
+resource migrationIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
+  name: names.migrationIdentity
+  location: location
+  tags: tags
 }
 
 var sqlPrivateDnsZoneName = 'privatelink${environment().suffixes.sqlServerHostname}'
@@ -274,3 +284,5 @@ output frontendEndpoint string = 'https://${frontendAppResource.properties.defau
 output sqlDatabaseName string = names.sqlDatabase
 output sqlServerName string = sqlServerResource.name
 output virtualNetworkName string = virtualNetworkResource.name
+output migrationIdentityResourceId string = migrationIdentity.id
+output migrationIdentityName string = migrationIdentity.name

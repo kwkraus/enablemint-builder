@@ -27,7 +27,7 @@ azd env set SQL_ADMINISTRATOR_LOGIN "<administrator-upn>"
 azd env set SQL_ADMINISTRATOR_OBJECT_ID "<administrator-object-id>"
 ```
 
-The CD workflow also requires `AZURE_MIGRATION_IDENTITY_RESOURCE_ID`, set to the resource ID of a user-assigned managed identity. Create or reuse that identity, grant it access with `tools/grant-migration-identity-access.ps1`, and store its resource ID as a GitHub Actions secret before running CD.
+The CD workflow also requires the migration identity's resource ID, which is a Bicep-managed output (`MIGRATION_IDENTITY_RESOURCE_ID`) rather than a manually created identity or GitHub secret - see [Apply EF Core migrations](#apply-ef-core-migrations).
 
 `infra/main.parameters.json` maps these azd environment variables to the required Bicep parameters. The secret inputs are Bicep secure parameters, but `azd env set` writes values into the local `.azure/<environment>/.env` file. Use a protected local environment or `azd env set-secret` with Azure Key Vault rather than sharing that file.
 
@@ -52,10 +52,12 @@ The Bicep deployment configures the API CORS allow-list for the generated fronte
 
 ## Grant the API database access
 
+`tools/run-vnet-migration.ps1` now grants the API App Service's system-assigned managed identity `db_datareader`/`db_datawriter` automatically on every run (using the migration identity's `db_owner` privileges — see [Apply EF Core migrations](#apply-ef-core-migrations)). The manual steps below are only needed as a fallback, e.g. before the migration job has run for a new environment.
+
 Because Azure SQL only accepts connections through the private endpoint, `sqlcmd` must run from a host with network line-of-sight to the virtual network (`vnet-enb-*`) — for example:
 
 - A workstation already routed to the VNet through your organization's ExpressRoute/VPN peering (common on corporate networks; ask your network team if the VNet needs an explicit peering or route).
-- A temporary jump box or Azure Bastion host deployed into the `snet-privateendpoints` (or a new) subnet of the same VNet, used only for this one-time step and then removed.
+- The disposable container shell in [`tools/bootstrap-vnet-shell.ps1`](#bootstrap-vnet-access-without-a-bastion-host), which injects an interactive Azure Container Instance into the existing `snet-container` subnet and deletes it when you're done — no Bastion host or jump box required.
 
 After provisioning, grant the API's system-assigned managed identity its runtime database permissions (using dynamic environment variables exported from `azd provision`):
 
@@ -72,22 +74,26 @@ The script uses Microsoft Entra authentication (`sqlcmd -G`) and grants only `db
 
 The account running the script must be the Azure SQL Microsoft Entra administrator or a database owner. Azure SQL must also be able to resolve the API App Service managed identity in Microsoft Entra ID; assign the SQL server identity the required directory-read permissions before running the script when your tenant requires it.
 
-## Grant migration identity access
+## Grant migration identity access (one-time bootstrap per environment)
 
-If using a dedicated migration identity (such as a Service Principal or User-Assigned Managed Identity for CI/CD), grant it `db_ddladmin`, `db_datareader`, and `db_datawriter` permissions using:
+`infra/resources.bicep` creates the migration identity (a user-assigned managed identity) as part of `azd provision` — its resource ID and name are available as azd outputs (`MIGRATION_IDENTITY_RESOURCE_ID`, `MIGRATION_IDENTITY_NAME`). Bicep does not, and cannot, grant it database permissions: Azure SQL's contained-user/role grants can only be issued by a principal that is already the server's Microsoft Entra Administrator (your human `sqlAdministratorObjectId`), and that grant can't run unattended inside a deployment.
+
+So, once per environment, after the first `azd provision` has created both the database and the migration identity, grant it `db_owner` (using the [disposable shell](#bootstrap-vnet-access-without-a-bastion-host) if you don't have VNet line-of-sight another way):
 
 ```powershell
 .\tools\grant-migration-identity-access.ps1 `
-  -IdentityDisplayName "<MIGRATION_IDENTITY_NAME>" `
+  -IdentityDisplayName $env:MIGRATION_IDENTITY_NAME `
   -SqlServerName $env:AZURE_SQL_SERVER_NAME `
   -DatabaseName $env:AZURE_SQL_DATABASE_NAME
 ```
+
+`db_owner` (rather than narrower roles) is what lets the migration job also grant the API identity's own permissions on every run — see below. This grant is stored in the database itself, so it survives every subsequent `azd provision`/CD run; you only need to do this again if the database is recreated.
 
 ## Apply EF Core migrations
 
 Because Azure SQL enforces `publicNetworkAccess: Disabled` and GitHub-hosted runners cannot reach private endpoints directly, database migrations can be executed inside the virtual network using an ephemeral Azure Container Instance (injected into `snet-container` subnet).
 
-The container group must run under a **dedicated migration identity** (for example, a user-assigned managed identity) that has been granted `db_ddladmin`/`db_datareader`/`db_datawriter`, and its resource ID must be provided to the migration runner (e.g., via `AZURE_MIGRATION_IDENTITY_RESOURCE_ID` in CI/CD).
+The container group runs under the **Bicep-managed migration identity** (`infra/resources.bicep`, output as `MIGRATION_IDENTITY_RESOURCE_ID`/`MIGRATION_IDENTITY_NAME`), which must have been granted `db_owner` once per environment - see [Grant migration identity access](#grant-migration-identity-access-one-time-bootstrap-per-environment). On every run, after applying pending EF Core migrations, the job also grants the API App Service's system-assigned identity `db_datareader`/`db_datawriter` (idempotent), so [Grant the API database access](#grant-the-api-database-access) no longer needs to be run manually in the normal flow.
 
 In PowerShell or GitHub Actions, you can pass the dynamic variables exported directly from `azd`:
 
@@ -97,10 +103,42 @@ In PowerShell or GitHub Actions, you can pass the dynamic variables exported dir
   -SqlServerName $env:AZURE_SQL_SERVER_NAME `
   -DatabaseName $env:AZURE_SQL_DATABASE_NAME `
   -VnetName $env:AZURE_VNET_NAME `
-  -MigrationIdentityResourceId "<user-assigned-identity-resource-id>"
+  -MigrationIdentityResourceId $env:MIGRATION_IDENTITY_RESOURCE_ID `
+  -ApiAppName $env:API_APP_NAME
 ```
 
-The script spins up a temporary container in `snet-container`, connects to Azure SQL over the private endpoint, executes pending EF Core migrations, streams container logs, verifies the zero exit code, and cleans up the container instance.
+The script spins up a temporary container in `snet-container`, connects to Azure SQL over the private endpoint, executes pending EF Core migrations, grants the API identity's runtime database access, streams container logs, verifies the zero exit code, and cleans up the container instance.
+
+## Bootstrap VNet access without a Bastion host
+
+`tools/bootstrap-vnet-shell.ps1` gives you a disposable, interactive shell inside the deployed VNet for one-time manual steps that need network line-of-sight to the private Azure SQL endpoint — for example [Grant migration identity access](#grant-migration-identity-access-one-time-bootstrap-per-environment) or the [Grant the API database access](#grant-the-api-database-access) fallback. It reuses the same `snet-container` subnet as the migration job, so no Bastion host or jump box is required, and Azure SQL's `publicNetworkAccess` setting is never touched.
+
+```powershell
+.\tools\bootstrap-vnet-shell.ps1 `
+  -ResourceGroup $env:AZURE_RESOURCE_GROUP `
+  -VnetName $env:AZURE_VNET_NAME
+```
+
+This creates a short-lived Azure Container Instance and attaches an interactive shell (`az container exec`). Once attached:
+
+1. Authenticate as yourself: `az login --use-device-code`, then open the printed URL/code in a browser and sign in as the Azure SQL Microsoft Entra administrator (`sqlAdministratorLogin`).
+2. Install `sqlcmd` inside the container:
+
+   ```bash
+   curl -sSL -O https://packages.microsoft.com/config/ubuntu/22.04/packages-microsoft-prod.deb
+   dpkg -i packages-microsoft-prod.deb
+   apt-get update
+   ACCEPT_EULA=Y apt-get install -y mssql-tools18 unixodbc-dev
+   export PATH="$PATH:/opt/mssql-tools18/bin"
+   ```
+
+3. Run the grant script's `sqlcmd` logic directly (interactive AAD auth), or copy a script into the container with `az container exec` and run it from there. For example, to run the same query as `tools/grant-migration-identity-access.ps1` by hand:
+
+   ```bash
+   sqlcmd -S <sql-server-name>.database.windows.net -d <database-name> -G -Q "CREATE USER [<migration-identity-name>] FROM EXTERNAL PROVIDER; ALTER ROLE db_owner ADD MEMBER [<migration-identity-name>];"
+   ```
+
+4. Exit the shell (`exit`). The script deletes the container automatically once you disconnect (including on error, via a `finally` block) — nothing is left running.
 
 ## Continuous Delivery Pipeline (.github/workflows/cd.yml)
 
