@@ -19,9 +19,6 @@ type ResourceNames = {
   logAnalytics: string
   sqlDatabase: string
   sqlServer: string
-  virtualNetwork: string
-  sqlPrivateEndpoint: string
-  migrationIdentity: string
 }
 
 param names ResourceNames
@@ -73,65 +70,6 @@ resource appServicePlanResource 'Microsoft.Web/serverfarms@2025-03-01' existing 
   dependsOn: [appServicePlan]
 }
 
-// This subscription enforces public network access = Disabled on Azure SQL logical servers
-// (confirmed: explicit publicNetworkAccess='Enabled' is silently reverted by the platform).
-// SQL is reachable only through a private endpoint; the API App Service reaches it via
-// regional VNet integration on the same virtual network.
-module virtualNetwork 'br/public:avm/res/network/virtual-network:0.10.2' = {
-  params: {
-    name: names.virtualNetwork
-    location: location
-    addressPrefixes: ['10.20.0.0/22']
-    subnets: [
-      {
-        name: 'snet-appservice'
-        addressPrefix: '10.20.0.0/24'
-        delegation: 'Microsoft.Web/serverFarms'
-      }
-      {
-        name: 'snet-privateendpoints'
-        addressPrefix: '10.20.1.0/24'
-        privateEndpointNetworkPolicies: 'Disabled'
-      }
-      {
-        name: 'snet-container'
-        addressPrefix: '10.20.2.0/24'
-        delegation: 'Microsoft.ContainerInstance/containerGroups'
-      }
-    ]
-    tags: tags
-  }
-}
-
-resource virtualNetworkResource 'Microsoft.Network/virtualNetworks@2024-05-01' existing = {
-  name: names.virtualNetwork
-  dependsOn: [virtualNetwork]
-}
-
-// Dedicated identity for the ephemeral EF Core migration container job (see tools/run-vnet-migration.ps1).
-// Its Azure SQL db_owner grant is a one-time manual bootstrap (tools/grant-migration-identity-access.ps1);
-// Bicep only owns the identity's lifecycle, not its database permissions.
-resource migrationIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
-  name: names.migrationIdentity
-  location: location
-  tags: tags
-}
-
-var sqlPrivateDnsZoneName = 'privatelink${environment().suffixes.sqlServerHostname}'
-
-module sqlPrivateDnsZone 'br/public:avm/res/network/private-dns-zone:0.8.1' = {
-  params: {
-    name: sqlPrivateDnsZoneName
-    virtualNetworkLinks: [
-      {
-        virtualNetworkResourceId: virtualNetworkResource.id
-        registrationEnabled: false
-      }
-    ]
-    tags: tags
-  }
-}
-
 module sqlServer 'br/public:avm/res/sql/server:0.22.0' = {
   params: {
     administrators: {
@@ -153,13 +91,19 @@ module sqlServer 'br/public:avm/res/sql/server:0.22.0' = {
         zoneRedundant: false
       }
     ]
-    firewallRules: []
+    firewallRules: [
+      {
+        name: 'AllowAzureServices'
+        startIpAddress: '0.0.0.0'
+        endIpAddress: '0.0.0.0'
+      }
+    ]
     location: location
     managedIdentities: {
       systemAssigned: true
     }
     name: names.sqlServer
-    publicNetworkAccess: 'Disabled'
+    publicNetworkAccess: 'Enabled'
     tags: tags
   }
 }
@@ -167,32 +111,6 @@ module sqlServer 'br/public:avm/res/sql/server:0.22.0' = {
 resource sqlServerResource 'Microsoft.Sql/servers@2025-01-01' existing = {
   name: names.sqlServer
   dependsOn: [sqlServer]
-}
-
-module sqlPrivateEndpoint 'br/public:avm/res/network/private-endpoint:0.12.1' = {
-  params: {
-    name: names.sqlPrivateEndpoint
-    location: location
-    subnetResourceId: '${virtualNetworkResource.id}/subnets/snet-privateendpoints'
-    privateLinkServiceConnections: [
-      {
-        name: 'sqlServer'
-        properties: {
-          privateLinkServiceId: sqlServerResource.id
-          groupIds: ['sqlServer']
-        }
-      }
-    ]
-    privateDnsZoneGroup: {
-      privateDnsZoneGroupConfigs: [
-        {
-          name: 'sqlServer'
-          privateDnsZoneResourceId: sqlPrivateDnsZone.outputs.resourceId
-        }
-      ]
-    }
-    tags: tags
-  }
 }
 
 module frontendApp 'br/public:avm/res/web/site:0.24.0' = {
@@ -256,14 +174,9 @@ module apiApp 'br/public:avm/res/web/site:0.24.0' = {
       alwaysOn: false
       healthCheckPath: '/health'
       linuxFxVersion: 'DOTNETCORE|10.0'
-      vnetRouteAllEnabled: true
     }
-    virtualNetworkSubnetResourceId: '${virtualNetworkResource.id}/subnets/snet-appservice'
     tags: union(tags, { 'azd-service-name': 'api' })
   }
-  dependsOn: [
-    sqlPrivateEndpoint
-  ]
 }
 
 resource frontendAppResource 'Microsoft.Web/sites@2025-03-01' existing = {
@@ -283,6 +196,3 @@ output frontendAppName string = frontendAppResource.name
 output frontendEndpoint string = 'https://${frontendAppResource.properties.defaultHostName}'
 output sqlDatabaseName string = names.sqlDatabase
 output sqlServerName string = sqlServerResource.name
-output virtualNetworkName string = virtualNetworkResource.name
-output migrationIdentityResourceId string = migrationIdentity.id
-output migrationIdentityName string = migrationIdentity.name
