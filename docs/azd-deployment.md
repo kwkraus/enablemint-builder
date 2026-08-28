@@ -29,6 +29,16 @@ azd env set SQL_ADMINISTRATOR_OBJECT_ID "<administrator-object-id>"
 
 The CD workflow also requires the migration identity's resource ID, which is a Bicep-managed output (`MIGRATION_IDENTITY_RESOURCE_ID`) rather than a manually created identity or GitHub secret - see [Apply EF Core migrations](#apply-ef-core-migrations).
 
+The deployment service principal in `AZURE_CLIENT_ID` must have a Microsoft Entra federated identity credential for GitHub Actions. Use the immutable subject issued for this repository:
+
+```text
+Issuer:   https://token.actions.githubusercontent.com
+Subject:  repo:kwkraus@20584716/enablemint-builder@1160024462:ref:refs/heads/master
+Audience: api://AzureADTokenExchange
+```
+
+Create this credential on the deployment service principal (not the runtime application configured by `AZURE_AD_CLIENT_ID`) before running CD. The subject includes the immutable GitHub owner and repository IDs; using the legacy `repo:kwkraus/enablemint-builder:ref:refs/heads/master` subject causes `azure/login` to fail with `AADSTS70025`.
+
 `infra/main.parameters.json` maps these azd environment variables to the required Bicep parameters. The secret inputs are Bicep secure parameters, but `azd env set` writes values into the local `.azure/<environment>/.env` file. Use a protected local environment or `azd env set-secret` with Azure Key Vault rather than sharing that file.
 
 The default development deployment provisions a private network for Azure SQL: a virtual network (`vnet-enb-*`) with a private endpoint for the SQL server (`publicNetworkAccess: 'Disabled'`) and a `snet-appservice` subnet used for regional VNet integration on the API App Service. **This subscription enforces `publicNetworkAccess: Disabled` on Azure SQL logical servers at the platform level** — an explicit `Enabled` value in Bicep is silently reverted, so public firewall rules are not usable here. If your subscription does not have this restriction, you can simplify by removing the VNet/private-endpoint modules and re-adding public firewall rules instead.
