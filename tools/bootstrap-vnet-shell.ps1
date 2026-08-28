@@ -4,11 +4,12 @@ Creates a disposable, interactive Azure Container Instance inside the deployed V
 manual bootstrap tasks that require network line-of-sight to the private Azure SQL endpoint.
 
 .DESCRIPTION
-Use this once per environment to run tools/grant-migration-identity-access.ps1 (and, if needed,
-tools/grant-api-sql-database-access.ps1) without standing up a Bastion host or jump box. It creates
+Use this for ad-hoc database tasks that need to run inside the VNet (for example
+tools/grant-api-sql-database-access.ps1, or adding a human contained user for troubleshooting)
+without standing up a Bastion host or jump box. It creates
 a short-lived container in the existing snet-container subnet, attaches an interactive shell so you
 can authenticate as yourself (az login --use-device-code) and run sqlcmd, then deletes the container
-when you're done.
+when you're done. A normal first-time deployment does not require it.
 
 This script does not touch Azure SQL's public network access setting. It runs entirely inside the
 VNet using the container subnet that already exists for the EF Core migration job.

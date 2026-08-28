@@ -8,8 +8,6 @@ param azureAdClientSecret string
 @secure()
 param nextAuthSecret string
 param azureAdDomainHint string
-param sqlAdministratorLogin string
-param sqlAdministratorObjectId string
 
 type ResourceNames = {
   appInsights: string
@@ -109,8 +107,8 @@ resource virtualNetworkResource 'Microsoft.Network/virtualNetworks@2024-05-01' e
 }
 
 // Dedicated identity for the ephemeral EF Core migration container job (see tools/run-vnet-migration.ps1).
-// Its Azure SQL db_owner grant is a one-time manual bootstrap (tools/grant-migration-identity-access.ps1);
-// Bicep only owns the identity's lifecycle, not its database permissions.
+// It is also the SQL server's Microsoft Entra administrator (below), which gives it dbo authority in
+// every database on the server without any manual bootstrap over the private endpoint.
 resource migrationIdentity 'Microsoft.ManagedIdentity/userAssignedIdentities@2023-01-31' = {
   name: names.migrationIdentity
   location: location
@@ -134,11 +132,13 @@ module sqlPrivateDnsZone 'br/public:avm/res/network/private-dns-zone:0.8.1' = {
 
 module sqlServer 'br/public:avm/res/sql/server:0.22.0' = {
   params: {
+    // The deployment-only migration identity is the Entra administrator so that the first
+    // `dotnet ef database update` can run unattended against a private-only server.
     administrators: {
       azureADOnlyAuthentication: true
-      login: sqlAdministratorLogin
-      principalType: 'User'
-      sid: sqlAdministratorObjectId
+      login: names.migrationIdentity
+      principalType: 'Application'
+      sid: migrationIdentity.properties.principalId
       tenantId: azureAdTenantId
     }
     databases: [
@@ -277,6 +277,7 @@ resource apiAppResource 'Microsoft.Web/sites@2025-03-01' existing = {
 }
 
 output apiAppName string = apiAppResource.name
+output apiAppPrincipalId string = apiApp.outputs.?systemAssignedMIPrincipalId ?? ''
 output apiEndpoint string = 'https://${apiAppResource.properties.defaultHostName}'
 output applicationInsightsConnectionString string = appInsightsResource.properties.ConnectionString
 output frontendAppName string = frontendAppResource.name

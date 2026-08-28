@@ -8,9 +8,9 @@ connects to Azure SQL over the private endpoint (pep-sql-enb-*), applies pending
 then grants the API App Service's system-assigned managed identity db_datareader/db_datawriter
 (idempotent), streams container logs, verifies exit status, and cleans up the container group.
 
-The migration identity must already have been granted db_owner on the target database via
-tools/grant-migration-identity-access.ps1 (one-time manual bootstrap per environment) - db_owner is
-what allows this job to also grant the API identity's permissions in the same run.
+The migration identity is the Azure SQL server's Microsoft Entra administrator (configured in
+infra/resources.bicep), so it already has dbo authority in the database - no manual SQL bootstrap
+is required, which is what makes a first-time private-only deployment fully noninteractive.
 
 .EXAMPLE
 .\tools\run-vnet-migration.ps1 `
@@ -41,6 +41,9 @@ param(
 
     [Parameter(Mandatory)]
     [string]$ApiAppName,
+
+    [Parameter()]
+    [string]$ApiAppPrincipalId = '',
 
     [Parameter()]
     [string]$SubnetName = 'snet-container',
@@ -149,15 +152,54 @@ if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($identityClientId)) {
 # this token" instead of a clean identity error.
 $connectionString = "Server=tcp:$SqlServerName.database.windows.net,1433;Initial Catalog=$DatabaseName;Authentication=Active Directory Managed Identity;User Id=$identityClientId;Encrypt=True;TrustServerCertificate=False;"
 
+if ([string]::IsNullOrWhiteSpace($ApiAppPrincipalId)) {
+    Write-Host "Resolving API app system-assigned principal ID..." -ForegroundColor Cyan
+    $ApiAppPrincipalId = az webapp identity show --resource-group $ResourceGroup --name $ApiAppName --query principalId --output tsv
+}
+
+$apiPrincipalGuid = [Guid]::Empty
+if (-not [Guid]::TryParse($ApiAppPrincipalId, [ref]$apiPrincipalGuid)) {
+    throw "Could not resolve the system-assigned principal ID for API app '$ApiAppName'."
+}
+
+# Creating the contained user by SID avoids CREATE USER ... FROM EXTERNAL PROVIDER, which requires the
+# SQL server identity to hold Microsoft Graph directory-read permissions (Directory Readers). The SID is
+# the principal ID GUID in little-endian byte order, exactly as Guid.ToByteArray() produces it.
+$apiPrincipalSid = '0x' + [BitConverter]::ToString($apiPrincipalGuid.ToByteArray()).Replace('-', '')
+
 Write-Host "Creating ephemeral migration runner container '$ContainerGroupName' in subnet '$SubnetName'..." -ForegroundColor Cyan
 
-# Requires the migration identity to already hold db_owner (tools/grant-migration-identity-access.ps1);
-# db_owner is sufficient to create/alter the API identity's contained user without a separate admin identity.
-$grantApiAccessSql = "IF NOT EXISTS (SELECT 1 FROM sys.database_principals WHERE name = N'$ApiAppName') CREATE USER [$ApiAppName] FROM EXTERNAL PROVIDER; IF NOT EXISTS (SELECT 1 FROM sys.database_role_members rm JOIN sys.database_principals r ON r.principal_id = rm.role_principal_id JOIN sys.database_principals m ON m.principal_id = rm.member_principal_id WHERE r.name = N'db_datareader' AND m.name = N'$ApiAppName') ALTER ROLE db_datareader ADD MEMBER [$ApiAppName]; IF NOT EXISTS (SELECT 1 FROM sys.database_role_members rm JOIN sys.database_principals r ON r.principal_id = rm.role_principal_id JOIN sys.database_principals m ON m.principal_id = rm.member_principal_id WHERE r.name = N'db_datawriter' AND m.name = N'$ApiAppName') ALTER ROLE db_datawriter ADD MEMBER [$ApiAppName];"
+# The migration identity is the server's Entra administrator, so it maps to dbo and can create/alter
+# the API identity's contained user without any prior manual grant.
+$grantApiAccessSql = "IF NOT EXISTS (SELECT 1 FROM sys.database_principals WHERE name = N'$ApiAppName') CREATE USER [$ApiAppName] WITH SID = $apiPrincipalSid, TYPE = E; IF NOT EXISTS (SELECT 1 FROM sys.database_role_members rm JOIN sys.database_principals r ON r.principal_id = rm.role_principal_id JOIN sys.database_principals m ON m.principal_id = rm.member_principal_id WHERE r.name = N'db_datareader' AND m.name = N'$ApiAppName') ALTER ROLE db_datareader ADD MEMBER [$ApiAppName]; IF NOT EXISTS (SELECT 1 FROM sys.database_role_members rm JOIN sys.database_principals r ON r.principal_id = rm.role_principal_id JOIN sys.database_principals m ON m.principal_id = rm.member_principal_id WHERE r.name = N'db_datawriter' AND m.name = N'$ApiAppName') ALTER ROLE db_datawriter ADD MEMBER [$ApiAppName];"
 
 # mssql-tools18's sqlcmd has no --authentication-method flag (that's only in the newer go-sqlcmd); instead,
 # fetch the container's own managed-identity token from the ACI metadata endpoint and pass it via -G -P <tokenfile>.
-$rawScript = "echo Starting EF Core Migration... && git clone https://github.com/kwkraus/enablemint-builder.git repo && cd repo/src/backend && dotnet restore && dotnet tool install --global dotnet-ef && export PATH=`$PATH:`$HOME/.dotnet/tools && for attempt in `{1..20`}; do dotnet ef database update && break; if [ `"`$attempt`" -eq 20 ]; then exit 1; fi; echo `"Database token authentication is not ready; retrying in 15 seconds...`"; sleep 15; done && echo Installing sqlcmd... && curl -sSL -O https://packages.microsoft.com/config/ubuntu/22.04/packages-microsoft-prod.deb && dpkg -i packages-microsoft-prod.deb && apt-get update && ACCEPT_EULA=Y apt-get install -y mssql-tools18 unixodbc-dev jq && export PATH=`"`$PATH:/opt/mssql-tools18/bin`" && echo Granting API identity database access... && curl -s -H `"Metadata:true`" `"http://169.254.169.254/metadata/identity/oauth2/token?api-version=2018-02-01&resource=https%3A%2F%2Fdatabase.windows.net%2F&client_id=$identityClientId`" | jq -r '.access_token' | tr -d '\n' | iconv -f ascii -t UTF-16LE > /tmp/tokenFile && sqlcmd -S $SqlServerName.database.windows.net -d $DatabaseName -G -P /tmp/tokenFile -C -Q `"$grantApiAccessSql`""
+$rawScript = @"
+set -e
+echo Starting EF Core Migration...
+git clone https://github.com/kwkraus/enablemint-builder.git repo
+cd repo/src/backend
+dotnet restore
+dotnet tool install --global dotnet-ef
+export PATH=`$PATH:`$HOME/.dotnet/tools
+migrated=
+for attempt in `$(seq 1 20); do
+  if dotnet ef database update; then migrated=1; break; fi
+  echo "EF Core migration attempt `$attempt failed (see the error above); retrying in 15 seconds..."
+  sleep 15
+done
+if [ -z "`$migrated" ]; then echo "EF Core migrations did not succeed after 20 attempts."; exit 1; fi
+echo Installing sqlcmd...
+curl -sSL -O https://packages.microsoft.com/config/ubuntu/22.04/packages-microsoft-prod.deb
+dpkg -i packages-microsoft-prod.deb
+apt-get update
+ACCEPT_EULA=Y apt-get install -y mssql-tools18 unixodbc-dev jq
+export PATH="`$PATH:/opt/mssql-tools18/bin"
+echo Granting API identity database access...
+curl -s -H "Metadata:true" "http://169.254.169.254/metadata/identity/oauth2/token?api-version=2018-02-01&resource=https%3A%2F%2Fdatabase.windows.net%2F&client_id=$identityClientId" | jq -r '.access_token' | tr -d '\n' | iconv -f ascii -t UTF-16LE > /tmp/tokenFile
+sqlcmd -S $SqlServerName.database.windows.net -d $DatabaseName -G -P /tmp/tokenFile -C -b -Q "$grantApiAccessSql"
+"@
 
 $aciSpec = @{
     location = $location

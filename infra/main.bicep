@@ -26,12 +26,6 @@ param nextAuthSecret string
 @description('Optional Microsoft Entra domain hint used by the frontend sign-in experience.')
 param azureAdDomainHint string = ''
 
-@description('Display name or UPN of the Microsoft Entra user that administers Azure SQL.')
-param sqlAdministratorLogin string
-
-@description('Object ID of the Microsoft Entra user that administers Azure SQL.')
-param sqlAdministratorObjectId string
-
 @description('SKU for the Linux App Service plan.')
 param appServicePlanSkuName string = 'B1'
 
@@ -86,14 +80,13 @@ module resources './resources.bicep' = {
     location: location
     names: names
     nextAuthSecret: nextAuthSecret
-    sqlAdministratorLogin: sqlAdministratorLogin
-    sqlAdministratorObjectId: sqlAdministratorObjectId
     sqlDatabaseSkuName: sqlDatabaseSkuName
     tags: tags
   }
 }
 
 output API_APP_NAME string = resources.outputs.apiAppName
+output API_APP_PRINCIPAL_ID string = resources.outputs.apiAppPrincipalId
 output API_ENDPOINT string = resources.outputs.apiEndpoint
 output APPLICATIONINSIGHTS_CONNECTION_STRING string = resources.outputs.applicationInsightsConnectionString
 output AZURE_RESOURCE_GROUP string = resourceGroup.name

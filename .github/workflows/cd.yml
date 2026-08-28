@@ -59,8 +59,6 @@ jobs:
           AZURE_AD_CLIENT_SECRET: ${{ secrets.AZURE_AD_CLIENT_SECRET }}
           AZURE_AD_TENANT_ID: ${{ secrets.AZURE_AD_TENANT_ID }}
           NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET }}
-          SQL_ADMINISTRATOR_LOGIN: ${{ secrets.SQL_ADMINISTRATOR_LOGIN }}
-          SQL_ADMINISTRATOR_OBJECT_ID: ${{ secrets.SQL_ADMINISTRATOR_OBJECT_ID }}
 
       - name: Export azd environment variables
         shell: bash
@@ -80,6 +78,7 @@ jobs:
             -VnetName $env:AZURE_VNET_NAME `
             -MigrationIdentityResourceId $env:MIGRATION_IDENTITY_RESOURCE_ID `
             -ApiAppName $env:API_APP_NAME `
+            -ApiAppPrincipalId $env:API_APP_PRINCIPAL_ID `
             -ImageName 'mcr.microsoft.com/dotnet/sdk:10.0'
 
       - name: Deploy Applications
