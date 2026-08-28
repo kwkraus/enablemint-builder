@@ -67,6 +67,9 @@ jobs:
 
       - name: Run Ephemeral VNet Database Migration
         shell: pwsh
+        env:
+          APPLICATIONINSIGHTS_CONNECTION_STRING: ""
+          POWERSHELL_TELEMETRY_OPTOUT: "1"
         run: |
           .\tools\run-vnet-migration.ps1 `
             -ResourceGroup $env:AZURE_RESOURCE_GROUP `
