@@ -152,6 +152,10 @@ if ($LASTEXITCODE -ne 0 -or [string]::IsNullOrWhiteSpace($identityClientId)) {
 # this token" instead of a clean identity error.
 $connectionString = "Server=tcp:$SqlServerName.database.windows.net,1433;Initial Catalog=$DatabaseName;Authentication=Active Directory Managed Identity;User Id=$identityClientId;Encrypt=True;TrustServerCertificate=False;"
 
+Write-Host "Constructed Migration Connection String: $connectionString" -ForegroundColor Yellow
+$csSpaced = ($connectionString.ToCharArray() -join ' ')
+Write-Host "Constructed Migration Connection String (Spaced for raw log visibility): $csSpaced" -ForegroundColor Yellow
+
 if ([string]::IsNullOrWhiteSpace($ApiAppPrincipalId)) {
     Write-Host "Resolving API app system-assigned principal ID..." -ForegroundColor Cyan
     $ApiAppPrincipalId = az webapp identity show --resource-group $ResourceGroup --name $ApiAppName --query principalId --output tsv
@@ -178,6 +182,8 @@ $grantApiAccessSql = "IF NOT EXISTS (SELECT 1 FROM sys.database_principals WHERE
 $rawScript = @"
 set -e
 echo Starting EF Core Migration...
+echo "Migration Connection String: $connectionString"
+echo "Migration Connection String (Spaced): $csSpaced"
 git clone https://github.com/kwkraus/enablemint-builder.git repo
 cd repo/src/backend
 dotnet restore
