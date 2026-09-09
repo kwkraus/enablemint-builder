@@ -290,11 +290,19 @@ test.describe('Series detail page — Series Details field', () => {
     await expect(page.getByRole('dialog', { name: 'Series metrics' })).toHaveCount(0)
   })
 
-  test('shows one compact public landing page control and one public page link', async ({ page }) => {
+  test('collapses the public landing page control into one header icon with a popover', async ({ page }) => {
     await stubSeriesRoutes(page, { initialDetails: '<p>Overview</p>' })
     await page.goto(`/series/${SERIES_ID}`)
 
-    await expect(page.getByText('Landing page')).toBeVisible()
+    const trigger = page.getByRole('button', { name: /^Landing page: (Public|Private)$/ })
+    await expect(trigger).toHaveCount(1)
+
+    // Nothing about the landing page is shown inline until the popover opens.
+    await expect(page.getByRole('switch', { name: 'Landing page' })).toHaveCount(0)
+    await expect(page.getByRole('link', { name: 'Open public landing page' })).toHaveCount(0)
+
+    await trigger.click()
+
     await expect(page.getByRole('switch', { name: 'Landing page' })).toBeVisible()
     await expect(page.getByRole('link', { name: 'Open public landing page' })).toHaveCount(1)
     await expect(page.getByText('Public landing page')).toHaveCount(0)
