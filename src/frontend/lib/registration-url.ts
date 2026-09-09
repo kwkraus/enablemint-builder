@@ -6,6 +6,9 @@
  *  - An empty or whitespace-only value means "no registration URL" (not an error).
  *  - The trimmed value must not exceed `REGISTRATION_URL_MAX_LENGTH` characters.
  *  - The trimmed value must be an absolute URL using the `http` or `https` scheme.
+ *
+ * The same rules apply to the optional session recording URL (backend
+ * `RecordingUrlValidator`); pass a `label` to tailor the error copy.
  */
 
 export const REGISTRATION_URL_MAX_LENGTH = 2048
@@ -27,6 +30,8 @@ export interface RegistrationUrlValidationResult {
  */
 export function validateRegistrationUrl(
   rawValue: string | null | undefined,
+  /** Human-readable field name used in error messages (e.g. 'Recording link'). */
+  label = 'Registration link',
 ): RegistrationUrlValidationResult {
   const trimmed = (rawValue ?? '').trim()
 
@@ -37,7 +42,7 @@ export function validateRegistrationUrl(
   if (trimmed.length > REGISTRATION_URL_MAX_LENGTH) {
     return {
       value: null,
-      error: `Registration link must be ${REGISTRATION_URL_MAX_LENGTH} characters or fewer.`,
+      error: `${label} must be ${REGISTRATION_URL_MAX_LENGTH} characters or fewer.`,
     }
   }
 
@@ -54,7 +59,7 @@ export function validateRegistrationUrl(
   if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
     return {
       value: null,
-      error: 'Registration link must start with http:// or https://.',
+      error: `${label} must start with http:// or https://.`,
     }
   }
 

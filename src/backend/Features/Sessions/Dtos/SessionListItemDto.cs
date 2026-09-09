@@ -8,4 +8,5 @@ public record SessionListItemDto(
     int TotalRegistrations,
     int TotalAttendees,
     string OwnerDisplayName,
-    string? RegistrationUrl = null);
+    string? RegistrationUrl = null,
+    string? RecordingUrl = null);

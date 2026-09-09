@@ -4,6 +4,40 @@ import { useId, useRef, useState } from 'react'
 import { Dialog, FormControl, TextInput } from '@primer/react'
 import { validateRegistrationUrl } from '@/lib/registration-url'
 
+/**
+ * Which session link the dialog is editing. Controls only the user-facing copy;
+ * validation rules are identical for both (see `lib/registration-url.ts`).
+ */
+export type SessionLinkKind = 'registration' | 'recording'
+
+const LINK_COPY: Record<SessionLinkKind, {
+  addTitle: string
+  editTitle: string
+  subtitle: string
+  fieldLabel: string
+  placeholder: string
+  errorLabel: string
+}> = {
+  registration: {
+    addTitle: 'Add Registration Link',
+    editTitle: 'Edit Registration Link',
+    subtitle:
+      'Paste the webinar registration URL from your conferencing provider (Teams, Zoom, Webex, or any other provider).',
+    fieldLabel: 'Registration URL',
+    placeholder: 'https://teams.microsoft.com/registration/example',
+    errorLabel: 'Registration link',
+  },
+  recording: {
+    addTitle: 'Add Recording Link',
+    editTitle: 'Edit Recording Link',
+    subtitle:
+      'Paste the URL where the recording of this session can be watched (Stream, SharePoint, YouTube, or any other host).',
+    fieldLabel: 'Recording URL',
+    placeholder: 'https://example.com/recording',
+    errorLabel: 'Recording link',
+  },
+}
+
 interface RegistrationLinkDialogProps {
   /** Whether the dialog is currently open. Renders nothing when false. */
   open: boolean
@@ -13,6 +47,8 @@ interface RegistrationLinkDialogProps {
   onSave: (value: string | null) => void
   /** Called when the owner cancels or dismisses the dialog (Escape, backdrop, Cancel button, close button). Discards unsaved changes. */
   onCancel: () => void
+  /** Which link is being edited. Defaults to the registration link. */
+  kind?: SessionLinkKind
 }
 
 /**
@@ -30,7 +66,9 @@ export function RegistrationLinkDialog({
   initialValue,
   onSave,
   onCancel,
+  kind = 'registration',
 }: RegistrationLinkDialogProps) {
+  const copy = LINK_COPY[kind]
   const [value, setValue] = useState(initialValue ?? '')
   const [touched, setTouched] = useState(false)
   // Tracks whether we've already reset local state for the current "open" transition.
@@ -51,20 +89,20 @@ export function RegistrationLinkDialog({
 
   if (!open) return null
 
-  const { error } = validateRegistrationUrl(value)
+  const { error } = validateRegistrationUrl(value, copy.errorLabel)
   const showError = touched && error !== null
 
   function commit() {
     setTouched(true)
-    const result = validateRegistrationUrl(value)
+    const result = validateRegistrationUrl(value, copy.errorLabel)
     if (result.error) return
     onSave(result.value)
   }
 
   return (
     <Dialog
-      title={initialValue ? 'Edit Registration Link' : 'Add Registration Link'}
-      subtitle="Paste the webinar registration URL from your conferencing provider (Teams, Zoom, Webex, or any other provider)."
+      title={initialValue ? copy.editTitle : copy.addTitle}
+      subtitle={copy.subtitle}
       onClose={onCancel}
       initialFocusRef={inputRef}
       footerButtons={[
@@ -81,7 +119,7 @@ export function RegistrationLinkDialog({
       ]}
     >
       <FormControl>
-        <FormControl.Label>Registration URL</FormControl.Label>
+        <FormControl.Label>{copy.fieldLabel}</FormControl.Label>
         <TextInput
           ref={inputRef}
           value={value}
@@ -93,9 +131,9 @@ export function RegistrationLinkDialog({
               commit()
             }
           }}
-          placeholder="https://teams.microsoft.com/registration/example"
+          placeholder={copy.placeholder}
           block
-          aria-label="Registration URL"
+          aria-label={copy.fieldLabel}
           aria-describedby={showError ? errorId : undefined}
           aria-invalid={showError ? true : undefined}
           validationStatus={showError ? 'error' : undefined}
