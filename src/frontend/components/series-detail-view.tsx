@@ -254,6 +254,12 @@ export default function SeriesDetailView({ series, sessions, metrics }: Props) {
         </div>
 
         <div className="flex items-center gap-2">
+          <SeriesVisibilityToggle
+            checked={isPublic}
+            publicUrl={publicUrl}
+            onChange={handleVisibilityChange}
+            disabled={busy}
+          />
           <IconButton
             icon={GraphIcon}
             aria-label="Open series metrics"
@@ -292,13 +298,6 @@ export default function SeriesDetailView({ series, sessions, metrics }: Props) {
         canEdit={canEditDetails}
         onSave={handleDetailsSave}
         saving={detailsLoading}
-        disabled={busy}
-      />
-
-      <SeriesVisibilityToggle
-        checked={isPublic}
-        publicUrl={publicUrl}
-        onChange={handleVisibilityChange}
         disabled={busy}
       />
 
