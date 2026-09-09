@@ -16,6 +16,12 @@
 
 Treat frontend and backend as separate components. Project docs go in `docs/` (kebab-case). Implementation under `src/`, tests under `tests/`.
 
+## Optional pstack Mode
+
+GitHub Copilot cloud-agent users may opt into pstack orchestration for one bounded task by selecting the `pstack` custom agent before submitting or assigning the task. Do not select pstack automatically and do not infer pstack mode from ordinary prompts.
+
+The pstack agent selects and sequences a compatible playbook. This file, applicable path-specific instructions, and the repository's domain agents and skills remain authoritative. Spec-driven and `speckit` workflows remain separate from pstack.
+
 ## Agent Routing
 
 | Task | Agent |
@@ -24,11 +30,11 @@ Treat frontend and backend as separate components. Project docs go in `docs/` (k
 | Spec authoring (functional/technical) | `spec-driven-development` |
 | Spec-managed items (`New`/`Active`, `review:ready`, `techspec:stale`) — Description/AC edits | `spec-driven-development` |
 | General board CRUD, sprint/task/bug | `devops-workitem-manager` |
-| Backend API | `aspnet-api-expert` |
-| Frontend UI/UX | `ui-ux-nextjs` |
-| Logging/observability | `observability-sre` |
-| Cross-stack integration | `fullstack-integration` |
-| CI/CD | `cicd-devops` |
+| Backend API | `aspnet-minimal-api-specialist` |
+| Frontend UI/UX | `nextjs-frontend-ux-engineer` |
+| Logging/observability | `observability-and-incident-response` |
+| Cross-stack integration | `frontend-backend-integration-specialist` |
+| CI/CD | `github-actions-release-engineer` |
 
 Do not use plugin TDD agents (`testing-automation:tdd-*`) unless user asks by name.
 
@@ -66,3 +72,5 @@ After code changes, verify these files still match reality:
 6. Agent Routing pointers
 
 Applies to: `.github/copilot-instructions.md`, `.github/instructions/`, `.github/agents/`, `.github/skills/`. Run after dependency/structure/script/domain-rule changes.
+
+After changing Copilot agents, skills, instructions, hooks, or pstack documentation, run `node tools/validate-copilot-customizations.mjs`.

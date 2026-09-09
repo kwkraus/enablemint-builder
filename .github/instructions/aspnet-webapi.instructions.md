@@ -9,10 +9,10 @@ Applies to `src/backend`. Shared rules (architecture, build/test, congruency che
 
 ## Agent Routing
 - Testing → `frontend-backend-tdd-engineer`
-- Logging/observability → `observability-sre`
-- Graph (delegated OBO user lookup) → `aspnet-api-expert`
-- Schema/migrations → `data-schema-migration` skill via `aspnet-api-expert`
-- API contracts → `api-contract-design` skill via `aspnet-api-expert`
+- Logging/observability → `observability-and-incident-response`
+- Graph (delegated OBO user lookup) → `aspnet-minimal-api-specialist`
+- Schema/migrations → `data-schema-migration` skill via `aspnet-minimal-api-specialist`
+- API contracts → `api-contract-design` skill via `aspnet-minimal-api-specialist`
 - Ask when requirements are unclear.
 
 ## Architecture
@@ -56,7 +56,7 @@ Applies to `src/backend`. Shared rules (architecture, build/test, congruency che
 
 ## Error Handling
 - Centralize via middleware or endpoint filters.
-- No secrets/PII in logs. Logging policy → `observability-sre`.
+- No secrets/PII in logs. Logging policy → `observability-and-incident-response`.
 
 ## Best Practices
 - Small single-purpose methods; immutable records for DTOs where possible.

@@ -4,19 +4,19 @@
     "sessionStart": [
       {
         "type": "command",
-        "bash": "bash .github/hooks/log-session.sh sessionStart",
-        "powershell": "& '.github/hooks/log-session.ps1' -Event sessionStart",
+        "bash": "printf '%s\\n' 'Copilot agent session started'",
+        "powershell": "Write-Output 'Copilot agent session started'",
         "cwd": ".",
-        "timeoutSec": 15
+        "timeoutSec": 5
       }
     ],
     "sessionEnd": [
       {
         "type": "command",
-        "bash": "bash .github/hooks/log-session.sh sessionEnd",
-        "powershell": "& '.github/hooks/log-session.ps1' -Event sessionEnd",
+        "bash": "printf '%s\\n' 'Copilot agent session ended'",
+        "powershell": "Write-Output 'Copilot agent session ended'",
         "cwd": ".",
-        "timeoutSec": 15
+        "timeoutSec": 5
       }
     ]
   }

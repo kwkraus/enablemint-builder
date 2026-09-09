@@ -9,8 +9,8 @@ Applies to `src/frontend`. Shared rules (architecture, build/test, congruency ch
 
 ## Agent Routing
 - Testing → `frontend-backend-tdd-engineer`
-- UX/composition → `ui-ux-nextjs`
-- Accessibility → `frontend-accessibility-and-ux-acceptance` skill via `ui-ux-nextjs`
+- UX/composition → `nextjs-frontend-ux-engineer`
+- Accessibility → `frontend-accessibility-and-ux-acceptance` skill via `nextjs-frontend-ux-engineer`
 - Ask when requirements are unclear.
 
 ## Architecture
