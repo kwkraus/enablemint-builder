@@ -39,34 +39,41 @@ export function PublicSeriesLanding({ series }: Props) {
   const [expandedSessionId, setExpandedSessionId] = useState<string | null>(null)
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[var(--bgColor-accent-emphasis,#0969da)]/5 to-transparent">
-      {/* Banner: falls back to a bundled stock image today; `series.imageUrl` is
-          already threaded through end-to-end so a future owner-facing image
-          picker only needs to set that field -- no other changes required here. */}
-      <div className="relative h-40 w-full overflow-hidden sm:h-56 md:h-64">
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src={series.imageUrl || DEFAULT_BANNER_SRC}
-          alt=""
-          className="h-full w-full object-cover"
-        />
-      </div>
+    <div className="min-h-screen" style={{ backgroundColor: 'var(--bgColor-default)' }}>
+      <div className="mx-auto max-w-3xl px-4 py-6 sm:py-10">
+        {/* Banner: falls back to a bundled stock image today; `series.imageUrl` is
+            already threaded through end-to-end so a future owner-facing image
+            picker only needs to set that field -- no other changes required here.
+            Contained (not full-bleed) and modestly sized to keep the page compact. */}
+        <div
+          className="relative h-28 w-full overflow-hidden rounded-lg sm:h-36 md:h-44"
+          style={{ border: '1px solid var(--borderColor-default)' }}
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={series.imageUrl || DEFAULT_BANNER_SRC}
+            alt=""
+            className="h-full w-full object-cover"
+          />
+        </div>
 
-      <div className="mx-auto max-w-3xl px-4 py-10 sm:py-16">
-        <header className="mb-10 text-center sm:mb-14">
-          <p className="mb-2 text-xs font-semibold uppercase tracking-widest" style={{ color: 'var(--fgColor-accent)' }}>
+        <header className="mt-6 mb-6 text-left sm:mt-8 sm:mb-8">
+          <p className="mb-1 text-xs font-semibold uppercase tracking-widest" style={{ color: 'var(--fgColor-accent)' }}>
             Webinar Series
           </p>
-          <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">{series.title}</h1>
+          <h1 className="text-2xl font-bold tracking-tight sm:text-3xl">{series.title}</h1>
           {hasSeriesDetails(series.details) && (
-            <div className="mx-auto mt-4 max-w-2xl text-left text-base leading-relaxed [&_ul]:list-disc [&_ul]:pl-5 [&_p]:mb-3 [&_p:last-child]:mb-0 [&_li]:mb-1" style={{ color: 'var(--fgColor-muted)' }}>
+            <div className="mt-2 max-w-2xl text-left text-sm leading-relaxed [&_ul]:list-disc [&_ul]:pl-5 [&_p]:mb-2 [&_p:last-child]:mb-0 [&_li]:mb-1" style={{ color: 'var(--fgColor-muted)' }}>
               {renderSeriesDetailsHtml(series.details as string)}
             </div>
           )}
         </header>
 
         <section aria-label="Sessions">
-          <h2 className="mb-4 text-sm font-semibold uppercase tracking-wide" style={{ color: 'var(--fgColor-muted)' }}>
+          <h2
+            className="mb-3 border-b pb-2 text-sm font-semibold uppercase tracking-wide"
+            style={{ color: 'var(--fgColor-muted)', borderColor: 'var(--borderColor-default)' }}
+          >
             Sessions
           </h2>
 
@@ -82,7 +89,7 @@ export function PublicSeriesLanding({ series }: Props) {
               <p>No sessions have been scheduled yet. Check back soon.</p>
             </div>
           ) : (
-            <ul className="flex flex-col gap-3">
+            <ul className="flex flex-col">
               {sortedSessions.map((s) => {
                 const { date, time } = formatSessionDateTime(s.startsAt, s.endsAt)
                 const ended = hasEnded(s.endsAt)
@@ -97,13 +104,10 @@ export function PublicSeriesLanding({ series }: Props) {
                 return (
                   <li
                     key={s.sessionId}
-                    className="rounded-xl p-4 sm:p-5"
-                    style={{
-                      border: '1px solid var(--borderColor-default)',
-                      backgroundColor: 'var(--bgColor-default)',
-                    }}
+                    className="py-3"
+                    style={{ borderBottom: '1px solid var(--borderColor-muted, var(--borderColor-default))' }}
                   >
-                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
                       <button
                         type="button"
                         disabled={!hasDescription}
@@ -111,7 +115,12 @@ export function PublicSeriesLanding({ series }: Props) {
                         aria-expanded={hasDescription ? isExpanded : undefined}
                         className="min-w-0 flex-1 text-left disabled:cursor-default"
                       >
-                        <p className="flex items-center gap-1.5 font-semibold">
+                        <p className="flex items-center gap-1.5 text-sm" style={{ color: 'var(--fgColor-muted)' }}>
+                          <CalendarIcon size={14} />
+                          {date} · {time}
+                          {ended && <span className="ml-1 italic">(past)</span>}
+                        </p>
+                        <p className="mt-0.5 flex items-center gap-1.5 font-semibold">
                           <span className="truncate">{s.title}</span>
                           {hasDescription && (
                             isExpanded ? (
@@ -121,27 +130,19 @@ export function PublicSeriesLanding({ series }: Props) {
                             )
                           )}
                         </p>
-                        <p className="mt-1 flex items-center gap-1.5 text-sm" style={{ color: 'var(--fgColor-muted)' }}>
-                          <CalendarIcon size={14} />
-                          {date} · {time}
-                          {ended && <span className="ml-1 italic">(past)</span>}
-                        </p>
                       </button>
 
                       {(showRegistration || showRecording) && (
-                        <div className="flex shrink-0 flex-wrap items-center gap-2">
+                        <div className="flex shrink-0 flex-wrap items-center gap-3">
                           {showRegistration && (
                             <a
                               href={s.registrationUrl as string}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-md px-4 py-2 text-sm font-semibold transition-opacity hover:opacity-90"
-                              style={{
-                                backgroundColor: 'var(--bgColor-accent-emphasis)',
-                                color: 'var(--fgColor-onEmphasis)',
-                              }}
+                              className="inline-flex shrink-0 items-center justify-center gap-1 text-sm font-semibold hover:underline"
+                              style={{ color: 'var(--fgColor-accent)' }}
                             >
-                              Register <LinkExternalIcon size={14} />
+                              Register <LinkExternalIcon size={12} />
                             </a>
                           )}
 
@@ -150,20 +151,10 @@ export function PublicSeriesLanding({ series }: Props) {
                               href={s.recordingUrl as string}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-md px-4 py-2 text-sm font-semibold transition-opacity hover:opacity-90"
-                              style={
-                                showRegistration
-                                  ? {
-                                      border: '1px solid var(--borderColor-default)',
-                                      color: 'var(--fgColor-default)',
-                                    }
-                                  : {
-                                      backgroundColor: 'var(--bgColor-accent-emphasis)',
-                                      color: 'var(--fgColor-onEmphasis)',
-                                    }
-                              }
+                              className="inline-flex shrink-0 items-center justify-center gap-1 text-sm font-semibold hover:underline"
+                              style={{ color: 'var(--fgColor-accent)' }}
                             >
-                              <PlayIcon size={14} /> Watch Recording
+                              <PlayIcon size={12} /> Watch Recording
                             </a>
                           )}
                         </div>
@@ -172,8 +163,8 @@ export function PublicSeriesLanding({ series }: Props) {
 
                     {hasDescription && isExpanded && (
                       <div
-                        className="mt-3 max-w-none border-t pt-3 text-sm leading-relaxed [&_ul]:list-disc [&_ul]:pl-5 [&_p]:mb-2 [&_p:last-child]:mb-0 [&_li]:mb-1"
-                        style={{ borderColor: 'var(--borderColor-default)', color: 'var(--fgColor-muted)' }}
+                        className="mt-2 max-w-none text-sm leading-relaxed [&_ul]:list-disc [&_ul]:pl-5 [&_p]:mb-2 [&_p:last-child]:mb-0 [&_li]:mb-1"
+                        style={{ color: 'var(--fgColor-muted)' }}
                       >
                         {renderSeriesDetailsHtml(s.description as string)}
                       </div>
