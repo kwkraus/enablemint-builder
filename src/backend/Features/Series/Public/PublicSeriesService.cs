@@ -44,7 +44,8 @@ public class PublicSeriesService
                 s.StartsAt,
                 s.EndsAt,
                 s.RegistrationUrl,
-                s.Description))
+                s.Description,
+                s.RecordingUrl))
             .ToListAsync(cancellationToken);
 
         _logger?.LogInformation(

@@ -7,4 +7,5 @@ public record SessionResponseDto(
     DateTime StartsAt,
     DateTime EndsAt,
     string? RegistrationUrl = null,
-    string? Description = null);
+    string? Description = null,
+    string? RecordingUrl = null);

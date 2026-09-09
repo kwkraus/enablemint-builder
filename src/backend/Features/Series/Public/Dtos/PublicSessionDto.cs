@@ -10,4 +10,5 @@ public record PublicSessionDto(
     DateTime StartsAt,
     DateTime EndsAt,
     string? RegistrationUrl,
-    string? Description);
+    string? Description,
+    string? RecordingUrl);

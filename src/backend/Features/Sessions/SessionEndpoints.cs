@@ -131,7 +131,8 @@ public static class SessionEndpoints
 
     /// <summary>
     /// Maps a <see cref="SessionService"/> validation error code to a message identifying the
-    /// affected field. Covers <see cref="RegistrationUrlValidator"/> errors and the shared
+    /// affected field. Covers <see cref="RegistrationUrlValidator"/>/<see cref="RecordingUrlValidator"/>
+    /// errors and the shared
     /// description-too-long validation error (see
     /// specs/003-session-description/contracts/session-description-api.md), returning
     /// <see langword="null"/> for any other/unrecognized code.
@@ -142,6 +143,10 @@ public static class SessionEndpoints
             $"registrationUrl must be {RegistrationUrlValidator.MaxLength} characters or fewer.",
         RegistrationUrlValidator.InvalidErrorCode =>
             "registrationUrl must be a well-formed absolute http:// or https:// URL.",
+        RecordingUrlValidator.TooLongErrorCode =>
+            $"recordingUrl must be {RecordingUrlValidator.MaxLength} characters or fewer.",
+        RecordingUrlValidator.InvalidErrorCode =>
+            "recordingUrl must be a well-formed absolute http:// or https:// URL.",
         "validation_error" =>
             $"Session description must not exceed {SeriesDetailsSanitizer.MaxPlainTextLength:N0} characters.",
         _ => null

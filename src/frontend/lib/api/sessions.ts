@@ -16,6 +16,7 @@ export async function createSession(
     endsAt: string
     registrationUrl?: string | null
     description?: string | null
+    recordingUrl?: string | null
   },
   accessToken: string,
 ): Promise<SessionResponse> {
@@ -41,6 +42,7 @@ export async function updateSession(
     endsAt: string
     registrationUrl?: string | null
     description?: string | null
+    recordingUrl?: string | null
   },
   accessToken: string,
 ): Promise<SessionResponse> {

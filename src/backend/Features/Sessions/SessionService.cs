@@ -40,7 +40,8 @@ public class SessionService
                 m?.TotalRegistrations ?? 0,
                 m?.TotalAttendees ?? 0,
                 ownerDisplayName,
-                s.RegistrationUrl);
+                s.RegistrationUrl,
+                s.RecordingUrl);
         });
     }
 
@@ -63,6 +64,10 @@ public class SessionService
         if (registrationUrlErrorCode is not null)
             return (null, registrationUrlErrorCode);
 
+        var (recordingUrl, recordingUrlErrorCode) = RecordingUrlValidator.Normalize(req.RecordingUrl);
+        if (recordingUrlErrorCode is not null)
+            return (null, recordingUrlErrorCode);
+
         // Sanitize (and validate the length of) the description before any entity mutation, so a
         // rejected create never persists partial content. The sanitizer is the shared, server-side
         // authority also used by SeriesService (see src/backend/Common/SeriesDetailsSanitizer.cs).
@@ -84,7 +89,8 @@ public class SessionService
             StartsAt = req.StartsAt.Kind == DateTimeKind.Utc ? req.StartsAt : req.StartsAt.ToUniversalTime(),
             EndsAt = req.EndsAt.Kind == DateTimeKind.Utc ? req.EndsAt : req.EndsAt.ToUniversalTime(),
             RegistrationUrl = registrationUrl,
-            Description = descriptionResult.SanitizedHtml
+            Description = descriptionResult.SanitizedHtml,
+            RecordingUrl = recordingUrl
         };
 
         _db.Sessions.Add(session);
@@ -102,6 +108,10 @@ public class SessionService
         if (registrationUrlErrorCode is not null)
             return (null, registrationUrlErrorCode);
 
+        var (recordingUrl, recordingUrlErrorCode) = RecordingUrlValidator.Normalize(req.RecordingUrl);
+        if (recordingUrlErrorCode is not null)
+            return (null, recordingUrlErrorCode);
+
         // Sanitize before loading/mutating the session so a rejected update leaves the
         // previously-saved title, schedule, registration URL, and description untouched.
         var descriptionResult = SeriesDetailsSanitizer.Sanitize(req.Description);
@@ -118,6 +128,7 @@ public class SessionService
         session.EndsAt = req.EndsAt.Kind == DateTimeKind.Utc ? req.EndsAt : req.EndsAt.ToUniversalTime();
         session.RegistrationUrl = registrationUrl;
         session.Description = descriptionResult.SanitizedHtml;
+        session.RecordingUrl = recordingUrl;
 
         await _db.SaveChangesAsync();
 
@@ -154,5 +165,5 @@ public class SessionService
     // --- Helpers ---
 
     private static SessionResponseDto ToResponseDto(Session s) =>
-        new(s.SessionId, s.SeriesId, s.Title, s.StartsAt, s.EndsAt, s.RegistrationUrl, s.Description);
+        new(s.SessionId, s.SeriesId, s.Title, s.StartsAt, s.EndsAt, s.RegistrationUrl, s.Description, s.RecordingUrl);
 }

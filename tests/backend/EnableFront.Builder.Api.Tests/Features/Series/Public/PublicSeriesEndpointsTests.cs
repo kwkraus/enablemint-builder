@@ -127,6 +127,24 @@ public sealed class PublicSeriesEndpointsTests : IDisposable
         body!.Sessions.Should().ContainSingle(s => s.Title == "No Registration Session" && s.RegistrationUrl == null);
     }
 
+    [Fact]
+    public async Task Get_IncludesSessionRecordingUrl_WhenSet()
+    {
+        var series = await CreatePublicSeriesAsync("Public Series", null);
+        await CreateSessionAsync(
+            series.SeriesId, "Recorded Session", registrationUrl: null,
+            recordingUrl: "https://example.com/recording");
+        await CreateSessionAsync(series.SeriesId, "Unrecorded Session", registrationUrl: null);
+
+        var response = await _anonymousClient.GetAsync($"/api/v1/public/series/{series.SeriesId}");
+        var body = await response.Content.ReadFromJsonAsync<PublicSeriesResponseDto>(JsonOptions);
+
+        body!.Sessions.Should().ContainSingle(
+            s => s.Title == "Recorded Session" && s.RecordingUrl == "https://example.com/recording");
+        body.Sessions.Should().ContainSingle(
+            s => s.Title == "Unrecorded Session" && s.RecordingUrl == null);
+    }
+
     // ---------- Helpers ----------
 
     private async Task<SeriesResponseDto> CreatePublicSeriesAsync(string title, string? details)
@@ -148,7 +166,8 @@ public sealed class PublicSeriesEndpointsTests : IDisposable
         return (await response.Content.ReadFromJsonAsync<SeriesResponseDto>(JsonOptions))!;
     }
 
-    private async Task CreateSessionAsync(Guid seriesId, string title, string? registrationUrl)
+    private async Task CreateSessionAsync(
+        Guid seriesId, string title, string? registrationUrl, string? recordingUrl = null)
     {
         var response = await _ownerClient.PostAsJsonAsync(
             $"/api/v1/series/{seriesId}/sessions",
@@ -157,7 +176,8 @@ public sealed class PublicSeriesEndpointsTests : IDisposable
                 Title = title,
                 StartsAt = DateTime.UtcNow.AddDays(1),
                 EndsAt = DateTime.UtcNow.AddDays(1).AddHours(1),
-                RegistrationUrl = registrationUrl
+                RegistrationUrl = registrationUrl,
+                RecordingUrl = recordingUrl
             });
         response.EnsureSuccessStatusCode();
     }
