@@ -331,80 +331,84 @@ export default function SessionDetailPage() {
             )}
           </section>
 
-          <section className="rounded-lg border p-6 space-y-4" style={{ backgroundColor: 'var(--bgColor-default, var(--color-canvas-default))' }}>
-            <h2 className="text-base font-semibold">Registration</h2>
+          <section className="rounded-lg border p-4 space-y-3" style={{ backgroundColor: 'var(--bgColor-default, var(--color-canvas-default))' }}>
+            <h2 className="text-base font-semibold">Links</h2>
 
-            {registrationUrl ? (
-              <div className="flex items-center gap-2">
-                <PrimerLink
-                  href={registrationUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center gap-1"
-                >
-                  Registration Link
-                  <LinkExternalIcon size={14} aria-hidden="true" />
-                </PrimerLink>
-                <IconButton
-                  icon={PencilIcon}
-                  aria-label="Edit registration link"
-                  size="small"
-                  variant="invisible"
-                  disabled={saveLoading}
-                  onClick={() => setRegistrationDialogOpen(true)}
-                />
+            <div className="space-y-2">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h3 className="text-sm font-medium">Registration</h3>
+                {registrationUrl ? (
+                  <div className="inline-flex items-center gap-1 rounded-full border px-3 py-1 text-sm">
+                    <PrimerLink
+                      href={registrationUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1"
+                    >
+                      Registration Link
+                      <LinkExternalIcon size={14} aria-hidden="true" />
+                    </PrimerLink>
+                    <IconButton
+                      icon={PencilIcon}
+                      aria-label="Edit registration link"
+                      size="small"
+                      variant="invisible"
+                      disabled={saveLoading}
+                      onClick={() => setRegistrationDialogOpen(true)}
+                    />
+                  </div>
+                ) : (
+                  <Button
+                    type="button"
+                    variant="default"
+                    size="small"
+                    leadingVisual={LinkIcon}
+                    disabled={saveLoading}
+                    onClick={() => setRegistrationDialogOpen(true)}
+                  >
+                    Add Registration Link
+                  </Button>
+                )}
               </div>
-            ) : (
-              <Button
-                type="button"
-                variant="default"
-                size="small"
-                leadingVisual={LinkIcon}
-                disabled={saveLoading}
-                onClick={() => setRegistrationDialogOpen(true)}
-              >
-                Add Registration Link
-              </Button>
-            )}
+
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <h3 className="text-sm font-medium">Recording</h3>
+                {recordingUrl ? (
+                  <div className="inline-flex items-center gap-1 rounded-full border px-3 py-1 text-sm">
+                    <PrimerLink
+                      href={recordingUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-1"
+                    >
+                      Recording Link
+                      <LinkExternalIcon size={14} aria-hidden="true" />
+                    </PrimerLink>
+                    <IconButton
+                      icon={PencilIcon}
+                      aria-label="Edit recording link"
+                      size="small"
+                      variant="invisible"
+                      disabled={saveLoading}
+                      onClick={() => setRecordingDialogOpen(true)}
+                    />
+                  </div>
+                ) : (
+                  <Button
+                    type="button"
+                    variant="default"
+                    size="small"
+                    leadingVisual={DeviceCameraVideoIcon}
+                    disabled={saveLoading}
+                    onClick={() => setRecordingDialogOpen(true)}
+                  >
+                    Add Recording Link
+                  </Button>
+                )}
+              </div>
+            </div>
           </section>
         </div>
-
-        <section className="rounded-lg border p-6 space-y-4" style={{ backgroundColor: 'var(--bgColor-default, var(--color-canvas-default))' }}>
-          <h2 className="text-base font-semibold">Recording</h2>
-
-          {recordingUrl ? (
-            <div className="flex items-center gap-2">
-              <PrimerLink
-                href={recordingUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-1"
-              >
-                Recording Link
-                <LinkExternalIcon size={14} aria-hidden="true" />
-              </PrimerLink>
-              <IconButton
-                icon={PencilIcon}
-                aria-label="Edit recording link"
-                size="small"
-                variant="invisible"
-                disabled={saveLoading}
-                onClick={() => setRecordingDialogOpen(true)}
-              />
-            </div>
-          ) : (
-            <Button
-              type="button"
-              variant="default"
-              size="small"
-              leadingVisual={DeviceCameraVideoIcon}
-              disabled={saveLoading}
-              onClick={() => setRecordingDialogOpen(true)}
-            >
-              Add Recording Link
-            </Button>
-          )}
-        </section>
 
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
