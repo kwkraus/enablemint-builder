@@ -4,7 +4,7 @@ import { useState, useEffect, useMemo } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
-import { TrashIcon, PlusIcon, DownloadIcon, LinkExternalIcon } from '@primer/octicons-react'
+import { TrashIcon, PlusIcon, DownloadIcon, LinkExternalIcon, GraphIcon, XIcon } from '@primer/octicons-react'
 import { Button, IconButton, Token } from '@primer/react'
 import { ErrorBanner } from '@/components/error-banner'
 import { ConfirmDialog } from '@/components/confirm-dialog'
@@ -85,10 +85,24 @@ export default function SeriesDetailView({ series, sessions, metrics }: Props) {
   const [editLoading, setEditLoading] = useState(false)
   const [editError, setEditError] = useState<string | null>(null)
   const [visibilityLoading, setVisibilityLoading] = useState(false)
+  const [metricsOpen, setMetricsOpen] = useState(false)
 
   useEffect(() => {
     setSeriesTitle(series.title)
   }, [series.title])
+
+  useEffect(() => {
+    if (!metricsOpen) return
+
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === 'Escape') {
+        setMetricsOpen(false)
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [metricsOpen])
 
   async function handleTitleSave(nextTitle: string) {
     setEditLoading(true)
@@ -241,6 +255,13 @@ export default function SeriesDetailView({ series, sessions, metrics }: Props) {
 
         <div className="flex items-center gap-2">
           <IconButton
+            icon={GraphIcon}
+            aria-label="Open series metrics"
+            title="Metrics live here"
+            variant="default"
+            onClick={() => setMetricsOpen(true)}
+          />
+          <IconButton
             icon={DownloadIcon}
             aria-label="Download Series Data"
             variant="default"
@@ -280,46 +301,6 @@ export default function SeriesDetailView({ series, sessions, metrics }: Props) {
         onChange={handleVisibilityChange}
         disabled={busy}
       />
-
-      <section aria-label="Series metrics">
-        <h2
-          className="mb-3 text-sm font-semibold uppercase tracking-wide"
-          style={{ color: 'var(--fgColor-muted)' }}
-        >
-          Metrics
-        </h2>
-        <MetricsPanel
-          metrics={[
-            { label: 'Registrations', value: metrics?.totalRegistrations ?? 0 },
-            { label: 'Attendees', value: metrics?.totalAttendees ?? 0 },
-            { label: 'Accts Influenced', value: metrics?.uniqueAccountsInfluenced ?? 0 },
-            { label: 'Warm Accounts', value: metrics?.warmAccounts.length ?? 0 },
-          ]}
-        />
-        {metrics && metrics.warmAccounts.length > 0 && (
-          <div className="mt-3">
-            <p className="mb-2 text-xs font-medium" style={{ color: 'var(--fgColor-muted)' }}>
-              Warm accounts:
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {metrics.warmAccounts.map((wa) => (
-                <Token
-                  key={`${wa.accountDomain}-${wa.warmRule}`}
-                  text={
-                    <>
-                      {wa.accountDomain}{' '}
-                      <span className="font-semibold" style={{ color: 'var(--fgColor-accent)' }}>
-                        {wa.warmRule}
-                      </span>
-                    </>
-                  }
-                  size="medium"
-                />
-              ))}
-            </div>
-          </div>
-        )}
-      </section>
 
       <section aria-label="Sessions">
         <div className="mb-3 flex items-center justify-between">
@@ -479,6 +460,78 @@ export default function SeriesDetailView({ series, sessions, metrics }: Props) {
         onConfirm={handleDeleteSession}
         onCancel={() => setDeleteSessionId(null)}
       />
+
+      {metricsOpen && (
+        <div className="fixed inset-0 z-50" role="presentation">
+          <button
+            type="button"
+            className="absolute inset-0 h-full w-full cursor-default"
+            style={{ backgroundColor: 'rgba(31, 35, 40, 0.24)' }}
+            aria-label="Close series metrics"
+            onClick={() => setMetricsOpen(false)}
+          />
+          <aside
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="series-metrics-title"
+            className="absolute right-0 top-0 flex h-full w-full max-w-xl flex-col overflow-y-auto p-6 shadow-xl sm:w-[30rem]"
+            style={{
+              backgroundColor: 'var(--bgColor-default)',
+              borderLeft: '1px solid var(--borderColor-default)',
+            }}
+          >
+            <div className="mb-5 flex items-start justify-between gap-4">
+              <div>
+                <h2 id="series-metrics-title" className="text-xl font-semibold">
+                  Series metrics
+                </h2>
+                <p className="mt-1 text-sm" style={{ color: 'var(--fgColor-muted)' }}>
+                  Snapshot of registrations, attendance, and account influence for this series.
+                </p>
+              </div>
+              <IconButton
+                icon={XIcon}
+                aria-label="Close series metrics"
+                variant="invisible"
+                onClick={() => setMetricsOpen(false)}
+              />
+            </div>
+
+            <MetricsPanel
+              className="grid-cols-1 sm:grid-cols-2"
+              metrics={[
+                { label: 'Registrations', value: metrics?.totalRegistrations ?? 0 },
+                { label: 'Attendees', value: metrics?.totalAttendees ?? 0 },
+                { label: 'Accounts influenced', value: metrics?.uniqueAccountsInfluenced ?? 0 },
+                { label: 'Warm accounts', value: metrics?.warmAccounts.length ?? 0 },
+              ]}
+            />
+            {metrics && metrics.warmAccounts.length > 0 && (
+              <div className="mt-5">
+                <p className="mb-2 text-xs font-medium uppercase tracking-wide" style={{ color: 'var(--fgColor-muted)' }}>
+                  Warm accounts
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {metrics.warmAccounts.map((wa) => (
+                    <Token
+                      key={`${wa.accountDomain}-${wa.warmRule}`}
+                      text={
+                        <>
+                          {wa.accountDomain}{' '}
+                          <span className="font-semibold" style={{ color: 'var(--fgColor-accent)' }}>
+                            {wa.warmRule}
+                          </span>
+                        </>
+                      }
+                      size="medium"
+                    />
+                  ))}
+                </div>
+              </div>
+            )}
+          </aside>
+        </div>
+      )}
     </div>
   )
 }

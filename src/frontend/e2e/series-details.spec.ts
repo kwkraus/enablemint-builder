@@ -38,12 +38,16 @@ function buildMockSeries(details: string | null) {
     details,
     createdAt: '2024-01-01T10:00:00.000Z',
     updatedAt: '2024-01-02T10:00:00.000Z',
+    isPublic: true,
+    imageUrl: null,
   }
 }
 
 const MOCK_METRICS = {
+  seriesId: SERIES_ID,
   totalRegistrations: 0,
   totalAttendees: 0,
+  uniqueRegistrantAccountDomains: 0,
   uniqueAccountsInfluenced: 0,
   warmAccounts: [],
 }
@@ -267,6 +271,34 @@ test.describe('Series detail page — Series Details field', () => {
 
     await expect(page.getByText(/10000 characters or fewer/)).toBeVisible()
     await expect(editor).toBeVisible()
+  })
+
+  test('keeps series metrics discoverable in an overlay instead of the main page', async ({ page }) => {
+    await stubSeriesRoutes(page, { initialDetails: '<p>Overview</p>' })
+    await page.goto(`/series/${SERIES_ID}`)
+
+    await expect(page.getByRole('heading', { name: 'Series metrics' })).toHaveCount(0)
+    await expect(page.getByRole('button', { name: 'Open series metrics' })).toBeVisible()
+
+    await page.getByRole('button', { name: 'Open series metrics' }).click()
+
+    await expect(page.getByRole('dialog', { name: 'Series metrics' })).toBeVisible()
+    await expect(page.getByText('Registrations')).toBeVisible()
+    await expect(page.getByText('Accounts influenced')).toBeVisible()
+
+    await page.keyboard.press('Escape')
+    await expect(page.getByRole('dialog', { name: 'Series metrics' })).toHaveCount(0)
+  })
+
+  test('shows one compact public landing page control and one public page link', async ({ page }) => {
+    await stubSeriesRoutes(page, { initialDetails: '<p>Overview</p>' })
+    await page.goto(`/series/${SERIES_ID}`)
+
+    await expect(page.getByText('Landing page')).toBeVisible()
+    await expect(page.getByRole('switch', { name: 'Landing page' })).toBeVisible()
+    await expect(page.getByRole('link', { name: 'Open public landing page' })).toHaveCount(1)
+    await expect(page.getByText('Public landing page')).toHaveCount(0)
+    await expect(page.getByText('View page')).toHaveCount(0)
   })
 
   // ── Read-only (non-owner) viewer scenarios ──────────────────────────────────
