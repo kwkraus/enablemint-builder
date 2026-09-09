@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { LinkExternalIcon, CalendarIcon, ChevronDownIcon, ChevronUpIcon } from '@primer/octicons-react'
+import { LinkExternalIcon, CalendarIcon, ChevronDownIcon, ChevronUpIcon, PlayIcon } from '@primer/octicons-react'
 import { hasSeriesDetails, renderSeriesDetailsHtml } from '@/lib/series-details-html'
 import type { PublicSeriesResponse } from '@/lib/api/types'
 
@@ -86,6 +86,11 @@ export function PublicSeriesLanding({ series }: Props) {
               {sortedSessions.map((s) => {
                 const { date, time } = formatSessionDateTime(s.startsAt, s.endsAt)
                 const ended = hasEnded(s.endsAt)
+                // A recording replaces the registration link once the session has been
+                // delivered. When a recording is published ahead of the delivery date,
+                // both links are shown so viewers can still register for the live run.
+                const showRecording = Boolean(s.recordingUrl)
+                const showRegistration = Boolean(s.registrationUrl) && !ended
                 const hasDescription = hasSeriesDetails(s.description)
                 const isExpanded = expandedSessionId === s.sessionId
 
@@ -123,19 +128,45 @@ export function PublicSeriesLanding({ series }: Props) {
                         </p>
                       </button>
 
-                      {s.registrationUrl && !ended && (
-                        <a
-                          href={s.registrationUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-md px-4 py-2 text-sm font-semibold transition-opacity hover:opacity-90"
-                          style={{
-                            backgroundColor: 'var(--bgColor-accent-emphasis)',
-                            color: 'var(--fgColor-onEmphasis)',
-                          }}
-                        >
-                          Register <LinkExternalIcon size={14} />
-                        </a>
+                      {(showRegistration || showRecording) && (
+                        <div className="flex shrink-0 flex-wrap items-center gap-2">
+                          {showRegistration && (
+                            <a
+                              href={s.registrationUrl as string}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-md px-4 py-2 text-sm font-semibold transition-opacity hover:opacity-90"
+                              style={{
+                                backgroundColor: 'var(--bgColor-accent-emphasis)',
+                                color: 'var(--fgColor-onEmphasis)',
+                              }}
+                            >
+                              Register <LinkExternalIcon size={14} />
+                            </a>
+                          )}
+
+                          {showRecording && (
+                            <a
+                              href={s.recordingUrl as string}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex shrink-0 items-center justify-center gap-1.5 rounded-md px-4 py-2 text-sm font-semibold transition-opacity hover:opacity-90"
+                              style={
+                                showRegistration
+                                  ? {
+                                      border: '1px solid var(--borderColor-default)',
+                                      color: 'var(--fgColor-default)',
+                                    }
+                                  : {
+                                      backgroundColor: 'var(--bgColor-accent-emphasis)',
+                                      color: 'var(--fgColor-onEmphasis)',
+                                    }
+                              }
+                            >
+                              <PlayIcon size={14} /> Watch Recording
+                            </a>
+                          )}
+                        </div>
                       )}
                     </div>
 

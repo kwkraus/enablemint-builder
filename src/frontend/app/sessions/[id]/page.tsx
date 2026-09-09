@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import Link from 'next/link'
-import { ChevronLeftIcon, CheckIcon, TrashIcon, LinkIcon, LinkExternalIcon, PencilIcon } from '@primer/octicons-react'
+import { ChevronLeftIcon, CheckIcon, TrashIcon, LinkIcon, LinkExternalIcon, PencilIcon, DeviceCameraVideoIcon } from '@primer/octicons-react'
 import { Button, IconButton, Spinner, Token, SkeletonBox, Link as PrimerLink } from '@primer/react'
 import { SkeletonText } from '@primer/react/experimental'
 import { ErrorBanner } from '@/components/error-banner'
@@ -57,6 +57,7 @@ export default function SessionDetailPage() {
       setStartsAtDate(toDate(s.startsAt))
       setEndsAtDate(toDate(s.endsAt))
       setRegistrationUrl(s.registrationUrl ?? null)
+      setRecordingUrl(s.recordingUrl ?? null)
       setDescription(s.description ?? null)
     } catch (err) {
       setLoadError(err instanceof Error ? err.message : 'Failed to load session')
@@ -74,6 +75,8 @@ export default function SessionDetailPage() {
   const [endsAtDate, setEndsAtDate] = useState<Date | null>(null)
   const [registrationUrl, setRegistrationUrl] = useState<string | null>(null)
   const [registrationDialogOpen, setRegistrationDialogOpen] = useState(false)
+  const [recordingUrl, setRecordingUrl] = useState<string | null>(null)
+  const [recordingDialogOpen, setRecordingDialogOpen] = useState(false)
   const [touched, setTouched] = useState(false)
 
   const titleError = touched && !title.trim() ? 'Title is required' : null
@@ -133,6 +136,7 @@ export default function SessionDetailPage() {
           endsAt: session?.endsAt ?? (endsAtDate ? endsAtDate.toISOString() : ''),
           registrationUrl: session?.registrationUrl ?? null,
           description: nextDescription,
+          recordingUrl: session?.recordingUrl ?? null,
         },
         token,
       )
@@ -166,6 +170,7 @@ export default function SessionDetailPage() {
           endsAt: endsAtDate ? endsAtDate.toISOString() : '',
           registrationUrl,
           description,
+          recordingUrl,
         },
         token,
       )
@@ -364,6 +369,43 @@ export default function SessionDetailPage() {
           </section>
         </div>
 
+        <section className="rounded-lg border p-6 space-y-4" style={{ backgroundColor: 'var(--bgColor-default, var(--color-canvas-default))' }}>
+          <h2 className="text-base font-semibold">Recording</h2>
+
+          {recordingUrl ? (
+            <div className="flex items-center gap-2">
+              <PrimerLink
+                href={recordingUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1"
+              >
+                Recording Link
+                <LinkExternalIcon size={14} aria-hidden="true" />
+              </PrimerLink>
+              <IconButton
+                icon={PencilIcon}
+                aria-label="Edit recording link"
+                size="small"
+                variant="invisible"
+                disabled={saveLoading}
+                onClick={() => setRecordingDialogOpen(true)}
+              />
+            </div>
+          ) : (
+            <Button
+              type="button"
+              variant="default"
+              size="small"
+              leadingVisual={DeviceCameraVideoIcon}
+              disabled={saveLoading}
+              onClick={() => setRecordingDialogOpen(true)}
+            >
+              Add Recording Link
+            </Button>
+          )}
+        </section>
+
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Button type="submit" variant="primary" leadingVisual={CheckIcon} disabled={saveLoading}>
@@ -430,6 +472,17 @@ export default function SessionDetailPage() {
           setRegistrationDialogOpen(false)
         }}
         onCancel={() => setRegistrationDialogOpen(false)}
+      />
+
+      <RegistrationLinkDialog
+        kind="recording"
+        open={recordingDialogOpen}
+        initialValue={recordingUrl}
+        onSave={(value) => {
+          setRecordingUrl(value)
+          setRecordingDialogOpen(false)
+        }}
+        onCancel={() => setRecordingDialogOpen(false)}
       />
     </div>
   )

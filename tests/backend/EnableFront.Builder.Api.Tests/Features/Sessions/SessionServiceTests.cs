@@ -688,6 +688,185 @@ public class SessionServiceTests : IDisposable
 
 
 
+    // ---------- RecordingUrl ----------
+
+    [Fact]
+    public async Task CreateAsync_PersistsRecordingUrl_WhenValid()
+    {
+        // Arrange
+        var series = BuildSeries();
+        _db.Series.Add(series);
+        await _db.SaveChangesAsync();
+
+        var startsAt = DateTime.UtcNow.AddHours(1);
+        var req = new CreateSessionRequest(
+            "With Recording", startsAt, startsAt.AddHours(1),
+            RegistrationUrl: null,
+            Description: null,
+            RecordingUrl: "  https://example.com/recording  ");
+
+        // Act
+        var (session, errorCode) = await _sut.CreateAsync(series.SeriesId, req, OwnerUserId);
+
+        // Assert
+        errorCode.Should().BeNull();
+        session!.RecordingUrl.Should().Be("https://example.com/recording");
+    }
+
+    [Fact]
+    public async Task CreateAsync_LeavesRecordingUrlNull_WhenOmitted()
+    {
+        // Arrange
+        var series = BuildSeries();
+        _db.Series.Add(series);
+        await _db.SaveChangesAsync();
+
+        var startsAt = DateTime.UtcNow.AddHours(1);
+        var req = new CreateSessionRequest("No Recording", startsAt, startsAt.AddHours(1));
+
+        // Act
+        var (session, errorCode) = await _sut.CreateAsync(series.SeriesId, req, OwnerUserId);
+
+        // Assert
+        errorCode.Should().BeNull();
+        session!.RecordingUrl.Should().BeNull();
+    }
+
+    [Theory]
+    [InlineData("not-a-url")]
+    [InlineData("example.com/recording")]
+    [InlineData("javascript:alert(1)")]
+    [InlineData("file:///c:/recording.mp4")]
+    public async Task CreateAsync_RejectsInvalidRecordingUrl(string invalidUrl)
+    {
+        // Arrange
+        var series = BuildSeries();
+        _db.Series.Add(series);
+        await _db.SaveChangesAsync();
+
+        var startsAt = DateTime.UtcNow.AddHours(1);
+        var req = new CreateSessionRequest(
+            "Bad Recording", startsAt, startsAt.AddHours(1),
+            RegistrationUrl: null,
+            Description: null,
+            RecordingUrl: invalidUrl);
+
+        // Act
+        var (session, errorCode) = await _sut.CreateAsync(series.SeriesId, req, OwnerUserId);
+
+        // Assert
+        session.Should().BeNull();
+        errorCode.Should().Be(RecordingUrlValidator.InvalidErrorCode);
+    }
+
+    [Fact]
+    public async Task CreateAsync_RejectsRecordingUrl_WhenLongerThanMaxLength()
+    {
+        // Arrange
+        var series = BuildSeries();
+        _db.Series.Add(series);
+        await _db.SaveChangesAsync();
+
+        var overlong = "https://example.com/" + new string('a', RecordingUrlValidator.MaxLength);
+        var startsAt = DateTime.UtcNow.AddHours(1);
+        var req = new CreateSessionRequest(
+            "Overlong Recording", startsAt, startsAt.AddHours(1),
+            RegistrationUrl: null,
+            Description: null,
+            RecordingUrl: overlong);
+
+        // Act
+        var (session, errorCode) = await _sut.CreateAsync(series.SeriesId, req, OwnerUserId);
+
+        // Assert
+        session.Should().BeNull();
+        errorCode.Should().Be(RecordingUrlValidator.TooLongErrorCode);
+    }
+
+    [Fact]
+    public async Task UpdateAsync_ReplacesAndClearsRecordingUrl()
+    {
+        // Arrange
+        var series = BuildSeries();
+        _db.Series.Add(series);
+        var session = BuildSession(series.SeriesId);
+        session.RecordingUrl = "https://example.com/old-recording";
+        _db.Sessions.Add(session);
+        await _db.SaveChangesAsync();
+
+        // Act
+        var (replaced, replaceError) = await _sut.UpdateAsync(
+            session.SessionId,
+            new UpdateSessionRequest(
+                session.Title, session.StartsAt, session.EndsAt,
+                RegistrationUrl: null,
+                Description: null,
+                RecordingUrl: "https://example.com/new-recording"),
+            OwnerUserId);
+
+        var (cleared, clearError) = await _sut.UpdateAsync(
+            session.SessionId,
+            new UpdateSessionRequest(session.Title, session.StartsAt, session.EndsAt),
+            OwnerUserId);
+
+        // Assert
+        replaceError.Should().BeNull();
+        replaced!.RecordingUrl.Should().Be("https://example.com/new-recording");
+        clearError.Should().BeNull();
+        cleared!.RecordingUrl.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task UpdateAsync_LeavesSessionUnchanged_WhenRecordingUrlInvalid()
+    {
+        // Arrange
+        var series = BuildSeries();
+        _db.Series.Add(series);
+        var session = BuildSession(series.SeriesId);
+        session.RecordingUrl = "https://example.com/original-recording";
+        _db.Sessions.Add(session);
+        await _db.SaveChangesAsync();
+
+        // Act
+        var (updated, errorCode) = await _sut.UpdateAsync(
+            session.SessionId,
+            new UpdateSessionRequest(
+                "Renamed", session.StartsAt, session.EndsAt,
+                RegistrationUrl: null,
+                Description: null,
+                RecordingUrl: "not-a-url"),
+            OwnerUserId);
+
+        // Assert
+        updated.Should().BeNull();
+        errorCode.Should().Be(RecordingUrlValidator.InvalidErrorCode);
+
+        var unchanged = await _db.Sessions.FindAsync(session.SessionId);
+        unchanged!.Title.Should().Be("Test Session");
+        unchanged.RecordingUrl.Should().Be("https://example.com/original-recording");
+    }
+
+    [Fact]
+    public async Task GetByIdAndGetBySeries_ReturnRecordingUrl()
+    {
+        // Arrange
+        var series = BuildSeries();
+        _db.Series.Add(series);
+        var session = BuildSession(series.SeriesId);
+        session.RecordingUrl = "https://example.com/recording";
+        _db.Sessions.Add(session);
+        await _db.SaveChangesAsync();
+
+        // Act
+        var byId = await _sut.GetByIdAsync(session.SessionId, OwnerUserId);
+        var listed = (await _sut.GetBySeriesAsync(series.SeriesId, OwnerUserId)).ToList();
+
+        // Assert
+        byId!.RecordingUrl.Should().Be("https://example.com/recording");
+        listed.Single().RecordingUrl.Should().Be("https://example.com/recording");
+    }
+
+
     // ---------- Description: sanitized persistence (specs/003-session-description) ----------
 
     [Fact]

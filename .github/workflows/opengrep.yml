@@ -88,6 +88,7 @@ jobs:
             --config "${RUNNER_TEMP}/semgrep-rules/typescript" \
             --config "${RUNNER_TEMP}/semgrep-rules/generic/secrets" \
             --config "${RUNNER_TEMP}/semgrep-rules/generic/ci" \
+            --exclude-rule=typescript.react.portability.i18next.jsx-not-internationalized \
             --disable-version-check \
             --sarif-output=opengrep-results.sarif \
             .

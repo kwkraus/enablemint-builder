@@ -28,6 +28,7 @@ export interface SessionListItem {
   totalAttendees: number
   ownerDisplayName: string
   registrationUrl: string | null
+  recordingUrl: string | null
 }
 
 export interface SessionResponse {
@@ -38,6 +39,7 @@ export interface SessionResponse {
   endsAt: string
   registrationUrl: string | null
   description: string | null
+  recordingUrl: string | null
 }
 
 export interface PublicSessionItem {
@@ -47,6 +49,7 @@ export interface PublicSessionItem {
   endsAt: string
   registrationUrl: string | null
   description: string | null
+  recordingUrl: string | null
 }
 
 export interface PublicSeriesResponse {
