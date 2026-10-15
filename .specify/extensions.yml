@@ -1,8 +1,47 @@
 installed:
+- assess
+- bug
 - companion
 settings:
   auto_execute_hooks: true
 hooks:
+  before_specify:
+  - extension: companion
+    command: speckit.companion.before-step
+    enabled: true
+    optional: false
+    priority: 10
+    prompt: Execute speckit.companion.before-step?
+    description: Read the clock so after_specify can record when specify started
+    condition: null
+  before_plan:
+  - extension: companion
+    command: speckit.companion.before-step
+    enabled: true
+    optional: false
+    priority: 10
+    prompt: Execute speckit.companion.before-step?
+    description: Record plan start (currentStep=plan, status=planning) into .spec-context.json
+    condition: null
+  before_tasks:
+  - extension: companion
+    command: speckit.companion.before-step
+    enabled: true
+    optional: false
+    priority: 10
+    prompt: Execute speckit.companion.before-step?
+    description: Record tasks start (currentStep=tasks, status=tasking) into .spec-context.json
+    condition: null
+  before_implement:
+  - extension: companion
+    command: speckit.companion.before-step
+    enabled: true
+    optional: false
+    priority: 10
+    prompt: Execute speckit.companion.before-step?
+    description: Record implement start (currentStep=implement, status=implementing)
+      into .spec-context.json
+    condition: null
   after_specify:
   - extension: companion
     command: speckit.companion.after-specify
@@ -41,4 +80,24 @@ hooks:
     prompt: Execute speckit.companion.after-implement?
     description: Per-task journaling on implement (currentStep=implement; status=implemented
       when all tasks checked)
+    condition: null
+  before_converge:
+  - extension: companion
+    command: speckit.companion.before-converge
+    enabled: true
+    optional: false
+    priority: 10
+    prompt: Execute speckit.companion.before-converge?
+    description: Record converge start (currentStep=converge, status unchanged) into
+      .spec-context.json
+    condition: null
+  after_converge:
+  - extension: companion
+    command: speckit.companion.after-converge
+    enabled: true
+    optional: false
+    priority: 10
+    prompt: Execute speckit.companion.after-converge?
+    description: Record converge finish (currentStep=converge, status unchanged) into
+      .spec-context.json
     condition: null
